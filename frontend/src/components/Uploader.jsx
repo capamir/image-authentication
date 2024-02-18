@@ -1,10 +1,36 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { ArrowUpTrayIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import axios from "axios";
+
+const uploading = async (file, setIsUploading) => {
+  const formData = new FormData();
+  formData.append(file);
+  console.log("uploading");
+  setIsUploading(true);
+  try {
+    const config = {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    };
+    const { data } = await axios.post(
+      "/api/products/upload/",
+      formData,
+      config
+    );
+    console.log(data);
+    setIsUploading(false);
+  } catch (error) {
+    setIsUploading(false);
+  }
+};
 
 function Uploader({ styles }) {
   const [file, setFile] = useState("");
   const [rejected, setRejected] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
     if (acceptedFiles?.length) {
@@ -43,6 +69,7 @@ function Uploader({ styles }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    uploading(file, setIsUploading, setMessage);
   };
 
   return (
@@ -67,6 +94,10 @@ function Uploader({ styles }) {
       <section className="mt-10">
         <div className="flex gap-4">
           <h2 className="title text-3xl font-semibold">Preview</h2>
+          <h2 className="title text-3xl font-semibold">
+            {isUploading ? "uploading" : message ? message : ""}
+          </h2>
+
           <button
             type="button"
             onClick={removeAll}
@@ -79,7 +110,7 @@ function Uploader({ styles }) {
             type="submit"
             className="ml-auto mt-1 text-[12px] uppercase tracking-wider font-bold text-neutral-500 border border-purple-400 rounded-md px-3 hover:bg-purple-400 hover:text-white transition-colors"
           >
-            Upload to Cloudinary
+            Upload to server
           </button>
         </div>
 

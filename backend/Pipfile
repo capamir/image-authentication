@@ -6,6 +6,9 @@ name = "pypi"
 [packages]
 django = "*"
 djangorestframework = "*"
+django-cors-headers = "*"
+opencv-python = "*"
+pillow = "*"
 
 [dev-packages]
 

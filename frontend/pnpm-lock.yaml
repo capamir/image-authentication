@@ -11,6 +11,9 @@ dependencies:
   autoprefixer:
     specifier: ^9.8.8
     version: 9.8.8
+  axios:
+    specifier: ^1.6.7
+    version: 1.6.7
   canvas-to-image:
     specifier: ^2.2.5
     version: 2.2.5
@@ -23,6 +26,9 @@ dependencies:
   react:
     specifier: ^18.2.0
     version: 18.2.0
+  react-axios:
+    specifier: ^2.0.6
+    version: 2.0.6(axios@1.6.7)(prop-types@15.8.1)(react@18.2.0)
   react-dom:
     specifier: ^18.2.0
     version: 18.2.0(react@18.2.0)
@@ -3434,6 +3440,16 @@ packages:
     engines: {node: '>=4'}
     dev: false
 
+  /axios@1.6.7:
+    resolution: {integrity: sha512-/hDJGff6/c7u0hDkvkGxR/oy6CbCs8ziCsC7SqmhjfozqiJGc8Z11wrv9z9lYfY4K8l+H9TpjcMDX0xOZmx+RA==}
+    dependencies:
+      follow-redirects: 1.15.5
+      form-data: 4.0.0
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+    dev: false
+
   /axobject-query@3.2.1:
     resolution: {integrity: sha512-jsyHu61e6N4Vbz/v18DHwWYKK0bSWLqn47eeDSKPB7m8tqMHF9YJ+mhIk2lVteyZrY8tnSj/jHOv4YiTCuCJgg==}
     dependencies:
@@ -5462,6 +5478,15 @@ packages:
 
   /form-data@3.0.1:
     resolution: {integrity: sha512-RHkBKtLWUVwd7SqRIvCZMEvAMoGUp0XU+seQiZejj0COz3RI3hWP4sCv3gZWWLjJTd7rGwcsF5eKZGii0r/hbg==}
+    engines: {node: '>= 6'}
+    dependencies:
+      asynckit: 0.4.0
+      combined-stream: 1.0.8
+      mime-types: 2.1.35
+    dev: false
+
+  /form-data@4.0.0:
+    resolution: {integrity: sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==}
     engines: {node: '>= 6'}
     dependencies:
       asynckit: 0.4.0
@@ -8740,6 +8765,10 @@ packages:
       ipaddr.js: 1.9.1
     dev: false
 
+  /proxy-from-env@1.1.0:
+    resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
+    dev: false
+
   /psl@1.9.0:
     resolution: {integrity: sha512-E/ZsdU4HLs/68gYzgGTkMicWTLPdAftJLfJFlLUAAKZGkStNU72sZjT66SnMDVOfOWY/YAoiD7Jxa9iHvngcag==}
     dev: false
@@ -8804,6 +8833,18 @@ packages:
       raf: 3.4.1
       regenerator-runtime: 0.13.11
       whatwg-fetch: 3.6.20
+    dev: false
+
+  /react-axios@2.0.6(axios@1.6.7)(prop-types@15.8.1)(react@18.2.0):
+    resolution: {integrity: sha512-srQnLZXaW9LDJyC4/qvQ7aPi/rUpsggd3RIM5Q/vFLlQZ4l5bvPtqP/2+UeRXhJH75NfxbcPD3FkjiKONn5V8Q==}
+    peerDependencies:
+      axios: ^0.27.2
+      prop-types: ^15.8.1
+      react: ^16.0.0 || ^17.0.0 || ^18.0.0
+    dependencies:
+      axios: 1.6.7
+      prop-types: 15.8.1
+      react: 18.2.0
     dev: false
 
   /react-dev-utils@12.0.1(eslint@8.56.0)(typescript@5.3.3)(webpack@5.90.2):

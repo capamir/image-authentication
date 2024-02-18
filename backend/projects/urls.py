@@ -3,5 +3,5 @@ from . import views
 
 
 urlpatterns = [
-    path('process-image-dct', views.uploadImage, name='dct')
+    path('upload/', views.uploadImage, name='dct')
 ]
