@@ -5,7 +5,7 @@ import axios from "axios";
 
 const uploading = async (file, setIsUploading) => {
   const formData = new FormData();
-  formData.append(file);
+  formData.append("image", file); // Corrected line
   console.log("uploading");
   setIsUploading(true);
   try {
@@ -15,7 +15,7 @@ const uploading = async (file, setIsUploading) => {
       },
     };
     const { data } = await axios.post(
-      "/api/products/upload/",
+      "http://127.0.0.1:8000/api/products/upload/",
       formData,
       config
     );
@@ -23,6 +23,7 @@ const uploading = async (file, setIsUploading) => {
     setIsUploading(false);
   } catch (error) {
     setIsUploading(false);
+    console.log(error.message);
   }
 };
 
