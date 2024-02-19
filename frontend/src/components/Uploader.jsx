@@ -1,37 +1,14 @@
-import { useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { ArrowUpTrayIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import axios from "axios";
-
-const uploading = async (file, setIsUploading) => {
-  const formData = new FormData();
-  formData.append("image", file); // Corrected line
-  console.log("uploading");
-  setIsUploading(true);
-  try {
-    const config = {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    };
-    const { data } = await axios.post(
-      "http://127.0.0.1:8000/api/products/upload/",
-      formData,
-      config
-    );
-    console.log(data);
-    setIsUploading(false);
-  } catch (error) {
-    setIsUploading(false);
-    console.log(error.message);
-  }
-};
 
 function Uploader({ styles }) {
   const [file, setFile] = useState("");
   const [rejected, setRejected] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState("");
+  const [compressedImage, setCompressedImage] = useState("");
 
   const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
     if (acceptedFiles?.length) {
@@ -71,6 +48,43 @@ function Uploader({ styles }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     uploading(file, setIsUploading, setMessage);
+  };
+
+  const uploading = async (file, setIsUploading, setMessage) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    setIsUploading(true);
+    try {
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        responseType: 'arraybuffer'
+      };
+      const { data } = await axios.post(
+        "http://127.0.0.1:8000/api/products/upload/",
+        formData,
+        config
+      );
+
+      // Convert binary data to base64 string
+      const base64String = btoa(
+        new Uint8Array(data).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ''
+        )
+      );
+
+      // Set compressed image data
+      const compressedImageData = `data:image/jpeg;base64,${base64String}`;
+      setCompressedImage(compressedImageData);
+      setMessage(""); // Clear any previous error messages
+      setIsUploading(false);
+    } catch (error) {
+      setIsUploading(false);
+      setMessage(`Error: ${error.message}`);
+      console.log(error.message);
+    }
   };
 
   return (
@@ -140,6 +154,16 @@ function Uploader({ styles }) {
             </li>
           )}
         </ul>
+
+        {/* Display compressed image */}
+        {compressedImage && (
+          <div className="mt-6">
+            <h3 className="title text-lg font-semibold text-neutral-600 border-b pb-3">
+              Compressed Image
+            </h3>
+            <img src={compressedImage} alt="Compressed" className="mt-4 max-w-full h-auto" />
+          </div>
+        )}
 
         {/* Rejected Files */}
         <h3 className="title text-lg font-semibold text-neutral-600 mt-24 border-b pb-3">
