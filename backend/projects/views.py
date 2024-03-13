@@ -4,6 +4,9 @@ from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+import pyaes
+
+
 # Default quantization matrix (for quality factor 50)
 default_quantization_matrix = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
                                         [12, 12, 14, 19, 26, 58, 60, 55],
@@ -14,7 +17,6 @@ default_quantization_matrix = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
                                         [49, 64, 78, 87, 103, 121, 120, 101],
                                         [72, 92, 95, 98, 112, 100, 103, 99]])
 
-# Function to extract kMSB from the image
 
 
 # Function to extract kMSB from the image
@@ -38,7 +40,7 @@ def compress_grayscale_image(image_array, block_size, percentage, quantization_m
         percentage = float(percentage)
         
         # Process the grayscale image
-        compressed_img = process_channel(img, block_size, percentage, quantization_matrix)
+        compressed_img,dct_channel= process_channel(img, block_size, percentage, quantization_matrix)
         
         # Encode the compressed image as bytes
         _, img_encoded = cv2.imencode('.jpg', compressed_img)
@@ -47,7 +49,7 @@ def compress_grayscale_image(image_array, block_size, percentage, quantization_m
         response = HttpResponse(img_encoded.tobytes(), content_type='image/jpeg')
         response['Content-Disposition'] = 'attachment; filename="compressed_image.jpg"'
         
-        return response
+        return response,dct_channel
     except Exception as e:
         raise ValueError(f"Error in compressing image: {str(e)}")
 
@@ -63,14 +65,20 @@ def process_channel(channel, block_size, percentage, quantization_matrix):
         blocks = [padded_channel[i:i+block_size, j:j+block_size] for i in range(0, new_height, block_size) for j in range(0, new_width, block_size)]
         
         # Apply block processing
-        compressed_blocks = [block_process(block, percentage, quantization_matrix) for block in blocks]
+        compressed_blocks,compressed_block_dct_quantized = [block_process(block, percentage, quantization_matrix) for block in blocks]
         
         # Reconstruct compressed channel
         compressed_channel = np.concatenate([np.concatenate(compressed_blocks[row*int(new_width/block_size):(row+1)*int(new_width/block_size)], axis=1) for row in range(int(new_height/block_size))], axis=0)
-        
-        return compressed_channel
+        # Reconstruct dct facorts channel
+        dct_channel = np.concatenate([np.concatenate(compressed_block_dct_quantized[row*int(new_width/block_size):(row+1)*int(new_width/block_size)], axis=1) for row in range(int(new_height/block_size))], axis=0)
+
+
+        return compressed_channel,dct_channel
+    
+
     except Exception as e:
         raise ValueError(f"Error in processing channel: {str(e)}")
+    
 
 # Function to process a block using DCT and quantization
 def block_process(block, percentage, quantization_matrix):
@@ -93,7 +101,8 @@ def block_process(block, percentage, quantization_matrix):
         # Convert to uint8
         block_compressed = np.uint8(block_compressed)
         
-        return block_compressed
+        return block_compressed,compressed_block_dct_quantized
+    
     except Exception as e:
         raise ValueError(f"Error in block processing: {str(e)}")
 
@@ -110,6 +119,69 @@ def keep_percentage_zigzag(matrix, percentage):
         return flattened_matrix.reshape(matrix.shape)
     except Exception as e:
         raise ValueError(f"Error in keeping percentage of coefficients: {str(e)}")
+
+
+
+
+def block_connect(dct_coeffs, block_size):
+    # Get the shape of the DCT coefficients matrix
+    rows, cols = dct_coeffs.shape
+    
+    # Calculate the number of blocks in each dimension
+    num_blocks_row = rows // block_size
+    num_blocks_col = cols // block_size
+    
+    # Reshape the DCT coefficients matrix into blocks
+    blocks = dct_coeffs.reshape((num_blocks_row, block_size, num_blocks_col, block_size))
+    
+    # Initialize connected blocks dictionary
+    connected_blocks_dict = {}
+    
+    # Connect blocks in each column
+    for j in range(num_blocks_col):
+        connected_column = np.zeros((rows, block_size))
+        for i in range(num_blocks_row):
+            start_row = i * block_size
+            end_row = (i + 1) * block_size
+            start_col = j * block_size
+            end_col = (j + 1) * block_size
+            connected_column[start_row:end_row, :] = blocks[i, :, j, :]
+        connected_blocks_dict[j] = connected_column
+    
+    return connected_blocks_dict
+
+
+
+def encrypt_aes(plaintext, key):
+    # Initialize AES cipher
+    aes = pyaes.AESModeOfOperationECB(key)
+    
+    # Encrypt the plaintext
+    ciphertext = aes.encrypt(plaintext)
+    
+    return ciphertext
+
+def apply_aes_to_dict(dictionary, key):
+    encrypted_dict = {}
+    
+    # Iterate over dictionary items
+    for column, matrix in dictionary.items():
+        # Flatten the matrix to a 1D array
+        flattened_matrix = matrix.flatten()
+        
+        # Convert the flattened matrix to bytes
+        plaintext = bytes(flattened_matrix)
+        
+        # Encrypt the plaintext using AES
+        ciphertext = encrypt_aes(plaintext, key)
+        
+        # Add the encrypted data to the encrypted dictionary
+        encrypted_dict[column] = ciphertext
+    
+    return encrypted_dict
+
+
+
 
 @api_view(['POST'])
 def uploadImage(request):
@@ -130,9 +202,12 @@ def uploadImage(request):
         # Extract kMSB
         k = 5  # Adjust as needed
         image_with_msb = extract_msb(image, k)
-
         # Compress the image
-        compressed_image = compress_grayscale_image(image_with_msb, block_size, percentage, quantization_matrix)
+        compressed_image,dct_channel = compress_grayscale_image(image_with_msb, block_size, percentage, quantization_matrix)
+        bloks=block_connect(dct_channel,8)
+        password = "my_secret_key"
+        apply_aes_to_dict(bloks,password)
+
 
         return compressed_image
     except Exception as e:
