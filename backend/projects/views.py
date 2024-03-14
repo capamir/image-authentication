@@ -5,6 +5,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 import pyaes
+import json
+import base64
 
 
 # Default quantization matrix (for quality factor 50)
@@ -16,7 +18,6 @@ default_quantization_matrix = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
                                         [24, 35, 55, 64, 81, 104, 113, 92],
                                         [49, 64, 78, 87, 103, 121, 120, 101],
                                         [72, 92, 95, 98, 112, 100, 103, 99]])
-
 
 
 # Function to extract kMSB from the image
@@ -40,16 +41,16 @@ def compress_grayscale_image(image_array, block_size, percentage, quantization_m
         percentage = float(percentage)
         
         # Process the grayscale image
-        compressed_img,dct_channel= process_channel(img, block_size, percentage, quantization_matrix)
+        compressed_img, dct_channel = process_channel(img, block_size, percentage, quantization_matrix)
         
         # Encode the compressed image as bytes
         _, img_encoded = cv2.imencode('.jpg', compressed_img)
         
-        # Convert encoded image bytes to HttpResponse object
-        response = HttpResponse(img_encoded.tobytes(), content_type='image/jpeg')
-        response['Content-Disposition'] = 'attachment; filename="compressed_image.jpg"'
+        # Convert image data to base64 string
+        image_data = base64.b64encode(img_encoded).decode('utf-8')
         
-        return response,dct_channel
+        return {'image_data': image_data, 'dct_channel': dct_channel.tolist()}
+        
     except Exception as e:
         raise ValueError(f"Error in compressing image: {str(e)}")
 
@@ -65,20 +66,23 @@ def process_channel(channel, block_size, percentage, quantization_matrix):
         blocks = [padded_channel[i:i+block_size, j:j+block_size] for i in range(0, new_height, block_size) for j in range(0, new_width, block_size)]
         
         # Apply block processing
-        compressed_blocks,compressed_block_dct_quantized = [block_process(block, percentage, quantization_matrix) for block in blocks]
+        compressed_blocks, compressed_block_dct_quantized = [], []
+        for block in blocks:
+            block_compressed, block_dct_quantized = block_process(block, percentage, quantization_matrix)
+            compressed_blocks.append(block_compressed)
+            compressed_block_dct_quantized.append(block_dct_quantized)
         
         # Reconstruct compressed channel
         compressed_channel = np.concatenate([np.concatenate(compressed_blocks[row*int(new_width/block_size):(row+1)*int(new_width/block_size)], axis=1) for row in range(int(new_height/block_size))], axis=0)
-        # Reconstruct dct facorts channel
+        
+        # Reconstruct dct factors channel
         dct_channel = np.concatenate([np.concatenate(compressed_block_dct_quantized[row*int(new_width/block_size):(row+1)*int(new_width/block_size)], axis=1) for row in range(int(new_height/block_size))], axis=0)
 
-
-        return compressed_channel,dct_channel
-    
-
+        return compressed_channel, dct_channel  # Ensure only two values are returned
+        
     except Exception as e:
         raise ValueError(f"Error in processing channel: {str(e)}")
-    
+
 
 # Function to process a block using DCT and quantization
 def block_process(block, percentage, quantization_matrix):
@@ -122,66 +126,59 @@ def keep_percentage_zigzag(matrix, percentage):
 
 
 
-
 def block_connect(dct_coeffs, block_size):
-    # Get the shape of the DCT coefficients matrix
-    rows, cols = dct_coeffs.shape
+    try:
+        # Convert dct_coeffs to NumPy array if it's a string
+        if isinstance(dct_coeffs, str):
+            dct_coeffs = np.fromstring(dct_coeffs[1:-1], dtype=float, sep=' ')
+        
+        # Get the shape of the DCT coefficients matrix
+        rows, cols = dct_coeffs.shape
+        
+        # Calculate the number of blocks in each dimension
+        num_blocks_row = rows // block_size
+        num_blocks_col = cols // block_size
+        
+        # Reshape the DCT coefficients matrix into blocks
+        blocks = dct_coeffs.reshape((num_blocks_row, block_size, num_blocks_col, block_size))
+        
+        # Initialize connected blocks dictionary
+        connected_blocks_dict = {}
+        
+        # Connect blocks in each column
+        for j in range(num_blocks_col):
+            connected_blocks_dict[j] = blocks[:, :, j, :].reshape(-1, block_size, block_size)
+        
+        return connected_blocks_dict
     
-    # Calculate the number of blocks in each dimension
-    num_blocks_row = rows // block_size
-    num_blocks_col = cols // block_size
-    
-    # Reshape the DCT coefficients matrix into blocks
-    blocks = dct_coeffs.reshape((num_blocks_row, block_size, num_blocks_col, block_size))
-    
-    # Initialize connected blocks dictionary
-    connected_blocks_dict = {}
-    
-    # Connect blocks in each column
-    for j in range(num_blocks_col):
-        connected_column = np.zeros((rows, block_size))
-        for i in range(num_blocks_row):
-            start_row = i * block_size
-            end_row = (i + 1) * block_size
-            start_col = j * block_size
-            end_col = (j + 1) * block_size
-            connected_column[start_row:end_row, :] = blocks[i, :, j, :]
-        connected_blocks_dict[j] = connected_column
-    
-    return connected_blocks_dict
+    except Exception as e:
+        raise ValueError(f"Error in block_connect: {str(e)}")
 
-
-
-def encrypt_aes(plaintext, key):
-    # Initialize AES cipher
+def encrypt_aes_in_columns(connected_blocks_dict, key):
+    encrypted_columns = {}
     aes = pyaes.AESModeOfOperationECB(key)
-    
-    # Encrypt the plaintext
-    ciphertext = aes.encrypt(plaintext)
-    
-    return ciphertext
 
-def apply_aes_to_dict(dictionary, key):
-    encrypted_dict = {}
-    
-    # Iterate over dictionary items
-    for column, matrix in dictionary.items():
-        # Flatten the matrix to a 1D array
-        flattened_matrix = matrix.flatten()
-        
-        # Convert the flattened matrix to bytes
-        plaintext = bytes(flattened_matrix)
-        
-        # Encrypt the plaintext using AES
-        ciphertext = encrypt_aes(plaintext, key)
-        
-        # Add the encrypted data to the encrypted dictionary
-        encrypted_dict[column] = ciphertext
-    
-    return encrypted_dict
+    for column, blocks in connected_blocks_dict.items():
+        encrypted_blocks = []
+        for block in blocks:
+            # Flatten the block and convert to bytes
+            flattened_block = block.flatten().tobytes()
+
+            # Encrypt the block using AES
+            ciphertext = aes.encrypt(flattened_block)
+
+            # Append the encrypted block to the list
+            encrypted_blocks.append(ciphertext)
+
+        # Add encrypted blocks to the dictionary
+        encrypted_columns[column] = encrypted_blocks
+
+    return encrypted_columns
 
 
+import logging
 
+logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 def uploadImage(request):
@@ -202,14 +199,19 @@ def uploadImage(request):
         # Extract kMSB
         k = 5  # Adjust as needed
         image_with_msb = extract_msb(image, k)
+        
         # Compress the image
-        compressed_image,dct_channel = compress_grayscale_image(image_with_msb, block_size, percentage, quantization_matrix)
-        bloks=block_connect(dct_channel,8)
-        password = "my_secret_key"
-        apply_aes_to_dict(bloks,password)
+        result = compress_grayscale_image(image_with_msb, block_size, percentage, quantization_matrix)
+        compressed_image_data = result['image_data']
+        dct_channel_list = result['dct_channel']
+        
+        # Serialize dct_channel_list to JSON string
+        dct_channel_json = json.dumps(dct_channel_list)
 
+        # Return the compressed image data and dct_channel_json
+        return Response({'compressed_image_data': compressed_image_data, 'dct_channel_json': dct_channel_json}, status=status.HTTP_200_OK)
 
-        return compressed_image
     except Exception as e:
+        logger.exception("An error occurred in uploadImage view")
         error_message = str(e)
         return Response({'error': f'Internal server error: {error_message}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
