@@ -9,7 +9,6 @@ function Uploader({ styles }) {
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [compressedImage, setCompressedImage] = useState("");
-  const [columnsEncode, setColumnsEncode] = useState("");
 
   const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
     if (acceptedFiles?.length) {
@@ -60,6 +59,7 @@ function Uploader({ styles }) {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        responseType: 'arraybuffer'
       };
       const { data } = await axios.post(
         "http://127.0.0.1:8000/api/products/upload/",
@@ -67,9 +67,17 @@ function Uploader({ styles }) {
         config
       );
 
-      const { compressed_image, columns_encode } = data;
-      setCompressedImage(compressed_image);
-      setColumnsEncode(columns_encode);
+      // Convert binary data to base64 string
+      const base64String = btoa(
+        new Uint8Array(data).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ''
+        )
+      );
+
+      // Set compressed image data
+      const compressedImageData = `data:image/jpeg;base64,${base64String}`;
+      setCompressedImage(compressedImageData);
       setMessage(""); // Clear any previous error messages
       setIsUploading(false);
     } catch (error) {
@@ -154,16 +162,6 @@ function Uploader({ styles }) {
               Compressed Image
             </h3>
             <img src={compressedImage} alt="Compressed" className="mt-4 max-w-full h-auto" />
-          </div>
-        )}
-
-        {/* Display columns_encode */}
-        {columnsEncode && (
-          <div className="mt-6">
-            <h3 className="title text-lg font-semibold text-neutral-600 border-b pb-3">
-              Encrypted Columns
-            </h3>
-            <pre>{columnsEncode}</pre>
           </div>
         )}
 

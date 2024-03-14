@@ -85,6 +85,7 @@ def process_channel(channel, block_size, percentage, quantization_matrix):
 
 
 # Function to process a block using DCT and quantization
+# Function to process a block using DCT and quantization
 def block_process(block, percentage, quantization_matrix):
     try:
         # Apply DCT to the block
@@ -105,7 +106,7 @@ def block_process(block, percentage, quantization_matrix):
         # Convert to uint8
         block_compressed = np.uint8(block_compressed)
         
-        return block_compressed,compressed_block_dct_quantized
+        return block_compressed, compressed_block_dct_quantized
     
     except Exception as e:
         raise ValueError(f"Error in block processing: {str(e)}")
@@ -126,11 +127,19 @@ def keep_percentage_zigzag(matrix, percentage):
 
 
 
+
+
+import numpy as np
+
 def block_connect(dct_coeffs, block_size):
     try:
         # Convert dct_coeffs to NumPy array if it's a string
         if isinstance(dct_coeffs, str):
             dct_coeffs = np.fromstring(dct_coeffs[1:-1], dtype=float, sep=' ')
+        
+        # Convert dct_coeffs to NumPy array if it's a list
+        if isinstance(dct_coeffs, list):
+            dct_coeffs = np.array(dct_coeffs)
         
         # Get the shape of the DCT coefficients matrix
         rows, cols = dct_coeffs.shape
@@ -154,26 +163,33 @@ def block_connect(dct_coeffs, block_size):
     except Exception as e:
         raise ValueError(f"Error in block_connect: {str(e)}")
 
-def encrypt_aes_in_columns(connected_blocks_dict, key):
-    encrypted_columns = {}
-    aes = pyaes.AESModeOfOperationECB(key)
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 
-    for column, blocks in connected_blocks_dict.items():
-        encrypted_blocks = []
-        for block in blocks:
-            # Flatten the block and convert to bytes
-            flattened_block = block.flatten().tobytes()
+def encrypt_array(connected_blocks, key):
+    encrypted_blocks = {}
+    cipher = AES.new(key, AES.MODE_ECB)
+    for column, array in connected_blocks.items():
+        # Serialize the array to bytes
+        array_bytes = array.tobytes()
+        # Pad the data to be a multiple of 16 bytes (AES block size)
+        padded_data = array_bytes + b'\0' * (16 - len(array_bytes) % 16)
+        # Encrypt the padded data
+        encrypted_data = cipher.encrypt(padded_data)
+        encrypted_blocks[column] = encrypted_data
+        
+    def bytes_to_hex_string(byte_data):
+    # Convert bytes to hexadecimal string
+        return ''.join('{:02x}'.format(byte) for byte in byte_data)
 
-            # Encrypt the block using AES
-            ciphertext = aes.encrypt(flattened_block)
 
-            # Append the encrypted block to the list
-            encrypted_blocks.append(ciphertext)
+    for col, encrypted_data in encrypted_blocks.items():
+     hex_string = bytes_to_hex_string(encrypted_data)
+     print(f"Encrypted data for column {col}: {hex_string}")
 
-        # Add encrypted blocks to the dictionary
-        encrypted_columns[column] = encrypted_blocks
+    return encrypted_blocks
 
-    return encrypted_columns
+
 
 
 import logging
@@ -205,11 +221,13 @@ def uploadImage(request):
         compressed_image_data = result['image_data']
         dct_channel_list = result['dct_channel']
         
-        # Serialize dct_channel_list to JSON string
-        dct_channel_json = json.dumps(dct_channel_list)
+        key = get_random_bytes(16)  # Generate a random 16-byte key
+        dct_channel_list_en=encrypt_array(block_connect(dct_channel_list,8),key)
+
+        
 
         # Return the compressed image data and dct_channel_json
-        return Response({'compressed_image_data': compressed_image_data, 'dct_channel_json': dct_channel_json}, status=status.HTTP_200_OK)
+        return Response({'compressed_image_data': compressed_image_data}, status=status.HTTP_200_OK)
 
     except Exception as e:
         logger.exception("An error occurred in uploadImage view")
