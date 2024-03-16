@@ -4,9 +4,10 @@ from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-import pyaes
-import json
 import base64
+import hashlib
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 
 
 # Default quantization matrix (for quality factor 50)
@@ -78,13 +79,13 @@ def process_channel(channel, block_size, percentage, quantization_matrix):
         # Reconstruct dct factors channel
         dct_channel = np.concatenate([np.concatenate(compressed_block_dct_quantized[row*int(new_width/block_size):(row+1)*int(new_width/block_size)], axis=1) for row in range(int(new_height/block_size))], axis=0)
 
-        return compressed_channel, dct_channel  # Ensure only two values are returned
+        return compressed_channel, dct_channel  
         
     except Exception as e:
         raise ValueError(f"Error in processing channel: {str(e)}")
 
 
-# Function to process a block using DCT and quantization
+
 # Function to process a block using DCT and quantization
 def block_process(block, percentage, quantization_matrix):
     try:
@@ -129,7 +130,7 @@ def keep_percentage_zigzag(matrix, percentage):
 
 
 
-import numpy as np
+
 
 def block_connect(dct_coeffs, block_size):
     try:
@@ -163,33 +164,46 @@ def block_connect(dct_coeffs, block_size):
     except Exception as e:
         raise ValueError(f"Error in block_connect: {str(e)}")
 
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
 
 def encrypt_array(connected_blocks, key):
     encrypted_blocks = {}
     cipher = AES.new(key, AES.MODE_ECB)
     for column, array in connected_blocks.items():
-        # Serialize the array to bytes
-        array_bytes = array.tobytes()
+        # Convert the array to C-contiguous bytes
+        array_bytes = array.copy(order='C').tobytes()
         # Pad the data to be a multiple of 16 bytes (AES block size)
         padded_data = array_bytes + b'\0' * (16 - len(array_bytes) % 16)
         # Encrypt the padded data
         encrypted_data = cipher.encrypt(padded_data)
         encrypted_blocks[column] = encrypted_data
-        
-    def bytes_to_hex_string(byte_data):
-    # Convert bytes to hexadecimal string
-        return ''.join('{:02x}'.format(byte) for byte in byte_data)
 
-
-    for col, encrypted_data in encrypted_blocks.items():
-     hex_string = bytes_to_hex_string(encrypted_data)
-     print(f"Encrypted data for column {col}: {hex_string}")
+        # Print the encrypted outputs
+          
+        # print("encrypted Blocks:")
+        # print("--------------------------------")
+        # for col, encrypted_data in encrypted_blocks.items():
+        #     hex_string = ''.join('{:02x}'.format(byte) for byte in encrypted_data)
+        #     print(f"Encrypted data for column {col}: \n{hex_string}")
+        # print("--------------------------------")
 
     return encrypted_blocks
 
+def hash_blocks(connected_blocks_dict):
+    hashed_blocks = {}
+    for key, value in connected_blocks_dict.items():
+        # Convert the array to C-contiguous buffer before hashing
+        c_contiguous_array = value.copy(order='C')
+        hashed_blocks[key] = hashlib.sha256(c_contiguous_array).hexdigest()
 
+    # Print the output in the specified format
+        
+    print("Hashed Blocks:")
+    print("--------------------------------")
+    for key, value in hashed_blocks.items():
+        print(f"Column {key}: {value}")
+    print("--------------------------------")
+
+    return hashed_blocks
 
 
 import logging
@@ -219,17 +233,22 @@ def uploadImage(request):
         # Compress the image
         result = compress_grayscale_image(image_with_msb, block_size, percentage, quantization_matrix)
         compressed_image_data = result['image_data']
-        dct_channel_list = result['dct_channel']
-        
-        key = get_random_bytes(16)  # Generate a random 16-byte key
-        dct_channel_list_en=encrypt_array(block_connect(dct_channel_list,8),key)
+        dct_factors=result['dct_channel']
+
+        aes_key = get_random_bytes(16)
 
         
+        img_encypt=encrypt_array(block_connect(dct_factors,8),aes_key)
 
-        # Return the compressed image data and dct_channel_json
-        return Response({'compressed_image_data': compressed_image_data}, status=status.HTTP_200_OK)
+        image_hash=hash_blocks(block_connect(dct_factors,8))
 
+        # Log the length of the compressed image data for debugging
+        logger.debug(f"Length of compressed image data: {len(compressed_image_data)}")
+
+        # Return only the compressed image data to the frontend
+        return HttpResponse(compressed_image_data, content_type='image/jpeg')
+        
     except Exception as e:
-        logger.exception("An error occurred in uploadImage view")
         error_message = str(e)
+        logger.error(f"Internal server error: {error_message}")
         return Response({'error': f'Internal server error: {error_message}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -50,43 +50,34 @@ function Uploader({ styles }) {
     uploading(file, setIsUploading, setMessage);
   };
 
-  const uploading = async (file, setIsUploading, setMessage) => {
-    const formData = new FormData();
-    formData.append("image", file);
-    setIsUploading(true);
-    try {
-      const config = {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        responseType: 'arraybuffer'
-      };
-      const { data } = await axios.post(
-        "http://127.0.0.1:8000/api/products/upload/",
-        formData,
-        config
-      );
 
-      // Convert binary data to base64 string
-      const base64String = btoa(
-        new Uint8Array(data).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ''
-        )
-      );
+const uploading = async (file, setIsUploading, setMessage) => {
+  const formData = new FormData();
+  formData.append("image", file);
+  setIsUploading(true);
+  try {
+    const config = {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    };
+    const { data } = await axios.post(
+      "http://127.0.0.1:8000/api/products/upload/",
+      formData,
+      config
+    );
 
-      // Set compressed image data
-      const compressedImageData = `data:image/jpeg;base64,${base64String}`;
-      setCompressedImage(compressedImageData);
-      setMessage(""); // Clear any previous error messages
-      setIsUploading(false);
-    } catch (error) {
-      setIsUploading(false);
-      setMessage(`Error: ${error.message}`);
-      console.log(error.message);
-    }
-  };
-
+    // Set compressed image data
+    const compressedImageData = `data:image/jpeg;base64,${data}`;
+    setCompressedImage(compressedImageData);
+    setMessage(""); // Clear any previous error messages
+    setIsUploading(false);
+  } catch (error) {
+    setIsUploading(false);
+    setMessage(`Error: ${error.message}`);
+    console.log(error.message);
+  }
+};
   return (
     <form onSubmit={handleSubmit}>
       <div
