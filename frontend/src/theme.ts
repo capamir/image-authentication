@@ -22,6 +22,7 @@ const theme = extendTheme({
     text: "#81afdd",
     gradient: "var(--gradient-text)",
     colorBg: "#040c18",
+    colorFooter: "var(--color-footer)",
   },
 });
 
