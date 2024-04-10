@@ -9,6 +9,7 @@ djangorestframework = "*"
 django-cors-headers = "*"
 opencv-python = "*"
 pillow = "*"
+pycryptodome = "*"
 
 [dev-packages]
 
