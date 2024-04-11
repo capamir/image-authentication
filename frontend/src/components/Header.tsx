@@ -1,12 +1,22 @@
-import { Box, Flex, Heading, Image, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  HStack,
+  Image,
+  Text,
+} from "@chakra-ui/react";
 import { ai } from "../assets";
+import { FaArrowRight, FaGithub } from "react-icons/fa";
 
 const Header = () => {
   return (
     <Flex
       direction={{ base: "column", lg: "row" }}
       paddingX="6rem"
-      paddingY="4rem"
+      paddingY="2rem"
+      marginBottom={10}
     >
       <Box
         marginRight={{ base: "", lg: "5rem" }}
@@ -37,6 +47,18 @@ const Header = () => {
           alteration boisterous the attachment. Party we years to order allow
           asked of.
         </Text>
+        <HStack marginTop={5}>
+          <Button
+            rightIcon={<FaArrowRight />}
+            colorScheme="green"
+            fontSize="18px"
+          >
+            Get Started
+          </Button>
+          <Button leftIcon={<FaGithub />} fontSize="18px">
+            Github
+          </Button>
+        </HStack>
       </Box>
       <Box flex="1">
         <Image src={ai} alt="ai" width="100%" height="100%" />

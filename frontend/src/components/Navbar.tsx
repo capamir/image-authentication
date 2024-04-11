@@ -52,7 +52,7 @@ const links: LinkType[] = [
 const Navbar = () => {
   return (
     <Flex
-      paddingTop="2rem"
+      paddingTop="1.5rem"
       paddingX={{ base: "2rem", md: "4rem", lg: "6rem" }}
       alignItems="center"
     >
