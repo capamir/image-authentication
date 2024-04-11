@@ -26,7 +26,6 @@ const UploaderKey = () => {
   const [file, setFile] = useState<FileType>();
   const [address, setAddress] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [compressedImage, setCompressedImage] = useState("");
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles?.length) {
@@ -58,14 +57,11 @@ const UploaderKey = () => {
         },
       };
       const { data } = await axios.post(
-        "http://127.0.0.1:8000/api/products/upload/",
+        "http://127.0.0.1:8000/api/products/uploadkey/",
         formData,
         config
       );
-
-      // Set compressed image data
-      const compressedImageData = `data:image/jpeg;base64,${data}`;
-      setCompressedImage(compressedImageData);
+      console.log(data);
     } catch (error) {
       console.log(error.message);
     } finally {
@@ -170,19 +166,6 @@ const UploaderKey = () => {
               <Card width="300px" marginY={4}>
                 <CardBody>
                   <Image src={file.preview} alt={file.name} />
-                </CardBody>
-              </Card>
-            )}
-          </Box>
-          <Spacer />
-          <Box>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
-              compressed image
-            </Heading>
-            {compressedImage && (
-              <Card width="300px" marginY={4}>
-                <CardBody>
-                  <Image src={compressedImage} alt="compressedImage" />
                 </CardBody>
               </Card>
             )}

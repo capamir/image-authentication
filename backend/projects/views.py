@@ -1,12 +1,13 @@
-from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import viewsets
 from rest_framework import status
 import logging
 import cv2
 import numpy as np
 from projects.imageProcess import *
-
+from .serializers import ImageAddressSerializer
+from .models import ImageAddress
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +55,15 @@ def uploadImage(request):
         error_message = str(e)
         logger.error(f"Internal server error: {error_message}")
         return Response({'error': f'Internal server error: {error_message}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ImageAddressViewSet(viewsets.ViewSet):   
+    def create(self, request):
+        serializer = ImageAddressSerializer(data=request.data)
+        image_file = request.FILES.get('image')
+        if not image_file:
+            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+        print(image_file)
+        if serializer.is_valid():
+            return Response({"image": "image_file"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
