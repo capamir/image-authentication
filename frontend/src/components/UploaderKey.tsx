@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   Box,
   Button,
@@ -6,12 +5,15 @@ import {
   CardBody,
   Flex,
   FormControl,
+  FormLabel,
   Heading,
   Image,
+  Input,
   Spacer,
   Spinner,
   Text,
 } from "@chakra-ui/react";
+import axios from "axios";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
@@ -20,8 +22,9 @@ interface FileType {
   name: string;
 }
 
-const Uploader = () => {
+const UploaderKey = () => {
   const [file, setFile] = useState<FileType>();
+  const [address, setAddress] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [compressedImage, setCompressedImage] = useState("");
 
@@ -45,6 +48,8 @@ const Uploader = () => {
   const uploading = async () => {
     const formData = new FormData();
     formData.append("image", file);
+    formData.append("address", address);
+
     setIsUploading(true);
     try {
       const config = {
@@ -97,6 +102,10 @@ const Uploader = () => {
           We promise to keep your images safe
         </Heading>
         <form onSubmit={handleSubmit}>
+          <FormControl marginY={5}>
+            <FormLabel>Block Address</FormLabel>
+            <Input type="text" onChange={(e) => setAddress(e.target.value)} />
+          </FormControl>
           <FormControl
             marginX="auto"
             p={4}
@@ -184,4 +193,4 @@ const Uploader = () => {
   );
 };
 
-export default Uploader;
+export default UploaderKey;

@@ -1,5 +1,5 @@
 import { Box, ChakraProvider, ColorModeScript } from "@chakra-ui/react";
-import { Footer, Header, Navbar, Uploader } from "./components";
+import { Footer, Header, Navbar, Uploader, UploaderKey } from "./components";
 import theme from "./theme";
 import "./App.css";
 
@@ -13,6 +13,7 @@ function App() {
           <Header />
         </Box>
         <Uploader />
+        <UploaderKey />
         <Footer />
       </Box>
     </ChakraProvider>
