@@ -20,7 +20,10 @@ class Block(models.Model):
     data = models.TextField()
     previous_hash = models.CharField(max_length=64)
     hash = models.CharField(max_length=64)
-    encrypted_data = models.TextField(null=True, blank=True)  # New field for encrypted data
+    encrypted_data = models.TextField(null=True, blank=True)
+    original_shapes=models.TextField(null=True, blank=True)
+    
+          # New field for encrypted data
 
     def __str__(self):
         return f"Block {self.index}"

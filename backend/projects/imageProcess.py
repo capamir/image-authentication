@@ -1,25 +1,12 @@
+
 import cv2
 import numpy as np
+from projects.imageProcess import *
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
 import base64
 import hashlib
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-import numpy as np
-from Crypto.Util.Padding import pad
-import numpy as np
-import base64
-import secrets
-from Crypto.Util.Padding import unpad
-import struct
-from projects.models import *
 
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-import numpy as np
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def extract_msb(image_array, k):
@@ -41,63 +28,34 @@ def extract_msb(image_array, k):
         raise ValueError(f"Error in extracting MSB: {str(e)}")
 
 
-def divide_array_into_columns_with_dct(arr, block_size):
 
-    # Ensure array data type is float32 or float64
-    if arr.dtype != np.float32 and arr.dtype != np.float64:
-        arr = arr.astype(np.float32)  # Convert to float32 if not already
-        # You can also use np.float64 if needed
+def change_quotes_to_double(dictionary):
+    new_dict = {}
+    for key, value in dictionary.items():
+        new_key = key.replace("'", "\"") if isinstance(key, str) else key
+        new_value = value.replace("'", "\"") if isinstance(value, str) else value
+        new_dict[new_key] = new_value
+    return new_dict
 
-    # Divide the array into columns
-    columns = [arr[:, i:i+block_size[1]] for i in range(0, arr.shape[1], block_size[1])]
+def dct2(block):
+    return cv2.dct(block.astype(np.float32))
 
-    # Create a dictionary to store DCT-transformed blocks
-    dct_blocks_dict = {}
-
-    # Apply DCT on each block and save the transformed blocks as elements of the dictionary
-    for i, column in enumerate(columns):
-        dct_blocks = []
-        for block in column:
-            # Apply 2D DCT using cv2
-            dct_block = cv2.dct(cv2.dct(block.T).T)
-            dct_blocks.append(dct_block)
-        dct_blocks_dict[i] = zigzag_keep_percentage_matrix(combine_arrays_to_matrix(dct_blocks), 10)
-
-    return dct_blocks_dict
-
-
-
-
-def divide_array_into_columns(arr, block_size):
-    # Ensure array data type is float32 or float64
-    if arr.dtype != np.float32 and arr.dtype != np.float64:
-        arr = arr.astype(np.float32)  # Convert to float32 if not already
-        # You can also use np.float64 if needed
-
-    # Divide the array into columns
-    columns = [arr[:, i:i+block_size[1]] for i in range(0, arr.shape[1], block_size[1])]
-
-    # Combine the columns into a dictionary
-    columns_dict = {}
-    for i, column in enumerate(columns):
-        columns_dict[i] = combine_arrays_to_matrix(column)
-
-    return columns_dict
-
-
+def idct2(block):
+    return cv2.idct(block)
 
 def zigzag_keep_percentage_matrix(matrix, percentage):
     if percentage <= 0 or percentage >= 100:
         raise ValueError("Percentage should be between 0 and 100 (exclusive)")
 
     num_elements_to_keep = int(len(matrix) * len(matrix[0]) * (percentage / 100))
-    result = []
+    result = np.zeros_like(matrix)
 
-    # Zigzag pattern iteration
     direction = 1  # Start from the top-left corner
     row, col = 0, 0
+    count = 0
     for _ in range(num_elements_to_keep):
-        result.append(matrix[row][col])
+        result[row][col] = matrix[row][col]
+        count += 1
         if direction == 1:  # Moving upward
             if col == len(matrix[0]) - 1:  # If at the rightmost column
                 row += 1  # Move to the next row
@@ -121,20 +79,83 @@ def zigzag_keep_percentage_matrix(matrix, percentage):
 
     return result
 
+def process_image_blocks(image, block_size=8, percentage=50):
+    h, w = image.shape
+    dct_image = np.zeros((h, w), np.float32)
+    dct_columns = {}  # Dictionary to store DCT coefficients
+
+    for j in range(0, w, block_size):
+        column_blocks = []
+        for i in range(0, h, block_size):
+            block = image[i : i + block_size, j : j + block_size]
+            dct_block = dct2(block)
+            kept_dct_block = zigzag_keep_percentage_matrix(dct_block, percentage)
+            dct_image[i : i + block_size, j : j + block_size] = kept_dct_block
+            column_blocks.append(kept_dct_block)
+
+        dct_column = np.vstack(column_blocks)
+        dct_columns[j // block_size] = dct_column
+
+    return dct_image, dct_columns
+
+def reconstruct_image_from_dct_columns(dct_columns, h, w, block_size=8):
+    reconstructed_image = np.zeros((h, w), np.float32)
+    for j in range(0, w, block_size):
+        dct_column = dct_columns[j // block_size]
+        for i in range(0, h, block_size):
+            dct_block = dct_column[i : i + block_size, :]
+            idct_block = idct2(dct_block)
+            reconstructed_image[i : i + block_size, j : j + block_size] = idct_block
+    return reconstructed_image
 
 
-def combine_arrays_to_matrix(arrays):
-    # Combine arrays into a single matrix
-    matrix = np.concatenate(arrays, axis=0)
-    return matrix
 
-def hash_dictionary(original_dict):
-    hashed_dict = {}
-    for key, value in original_dict.items():
-        concatenated_string = ''.join(map(str, value))
-        hashed_value = hashlib.sha256(concatenated_string.encode()).hexdigest()
-        hashed_dict[key] = hashed_value
-    return hashed_dict
+def hash_columns_dict(columns_dict):
+    hashed_columns_dict = {}
+    for key, matrix in columns_dict.items():
+        matrix_bytes = matrix.tobytes()
+        sha256 = hashlib.sha256()
+        sha256.update(matrix_bytes)
+        hashed_columns_dict[key] = sha256.hexdigest()
+    return hashed_columns_dict
+
+
+def encrypt_column(column_data, key):
+    cipher = AES.new(key, AES.MODE_ECB)
+    padded_data = pad(column_data.tobytes(), AES.block_size)
+    encrypted_data = cipher.encrypt(padded_data)
+    # Return base64 encoded string of encrypted data
+    return base64.b64encode(encrypted_data).decode('utf-8')
+
+def decrypt_column(encrypted_data, key, original_shape):
+    # Decode base64 string to bytes
+    encrypted_data_bytes = base64.b64decode(encrypted_data)
+    cipher = AES.new(key, AES.MODE_ECB)
+    decrypted_padded_data = cipher.decrypt(encrypted_data_bytes)
+    decrypted_data = unpad(decrypted_padded_data, AES.block_size)
+    decrypted_array = np.frombuffer(decrypted_data, dtype=np.float32).reshape(original_shape)
+    return decrypted_array
+
+def encrypt_dct_columns(dct_columns, key):
+    encrypted_columns = {}
+    for col_index, column_data in dct_columns.items():
+        encrypted_columns[col_index] = encrypt_column(column_data, key)
+    return encrypted_columns
+
+def decrypt_dct_columns(encrypted_columns, key, original_shapes):
+    decrypted_columns = {}
+    for col_index, encrypted_data in encrypted_columns.items():
+        decrypted_columns[col_index] = decrypt_column(encrypted_data, key, original_shapes[col_index])
+    return decrypted_columns
+
+def decrypt_dct_columns2(encrypted_columns, key, original_shapes, columns_to_decrypt):
+    decrypted_columns = {}
+    for col_index in columns_to_decrypt:
+        encrypted_data = encrypted_columns.get(col_index)
+        if encrypted_data is not None:
+            decrypted_columns[col_index] = decrypt_column(encrypted_data, key, original_shapes[col_index])
+    return decrypted_columns
+
 
 
 def encrypt_dict(data_dict, key):
@@ -217,11 +238,6 @@ key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'  # Replace with your secret ke
 
 
 
-def get_dictionary_elements(my_dict, keyy):
-    encrypted_dict = {}
-    for key, value in my_dict.items():
-        encrypted_dict[key] = encrypt_array(value, keyy)
-    return {str(k): base64.b64encode(v).decode('utf-8') for k, v in encrypted_dict.items()}  # Encode to base64
 
 def get_dictionary_element2(my_dict, indices, keyy):
     decrypted_elements = {}
@@ -241,27 +257,9 @@ def get_dictionary_element2(my_dict, indices, keyy):
     
     return decrypted_elements
 
-def decrypt_output(encrypted_output, key):
-    cipher = AES.new(key, AES.MODE_ECB)
-    decrypted_data = cipher.decrypt(encrypted_output)
-    decrypted_data = unpad(decrypted_data, AES.block_size)
-    array = []
-    num_floats = len(decrypted_data) // 4
-    for i in range(num_floats):
-        float_bytes = decrypted_data[i * 4: (i + 1) * 4]
-        num = struct.unpack('f', float_bytes)[0]
-        array.append(num)
-    return array
-
-def encrypt_array(array, key):
-    byte_array = b''.join(struct.pack('f', float(num)) for num in array)
-    byte_array = pad(byte_array, AES.block_size)
-    cipher = AES.new(key, AES.MODE_ECB)
-    encrypted_data = cipher.encrypt(byte_array)
-    return encrypted_data
 
 
-def decrypt_output(encrypted_output, key):
+
     cipher = AES.new(key, AES.MODE_ECB)
     decrypted_data = cipher.decrypt(encrypted_output)
     decrypted_data = unpad(decrypted_data, AES.block_size)

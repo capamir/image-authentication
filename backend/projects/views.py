@@ -9,21 +9,12 @@ from projects.imageProcess import *
 from .serializers import ImageAddressSerializer
 from django.db import transaction
 from projects.models import Block
+import base64
+import matplotlib.pyplot as plt
+
 
 
 logger = logging.getLogger(__name__)
-
-
-def change_quotes_to_double(dictionary):
-    new_dict = {}
-    for key, value in dictionary.items():
-        new_key = key.replace("'", "\"")
-        if isinstance(value, str):
-            new_value = value.replace("'", "\"")
-        else:
-            new_value = value
-        new_dict[new_key] = new_value
-    return new_dict
 
 
 
@@ -35,117 +26,117 @@ def uploadImage(request):
         if not image_file:
             return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if the blockchain is empty
-        if not Block.objects.exists():
-            # Create the genesis block
-            Block.create_genesis_block(encrypted_data=None)  # Pass appropriate encrypted_data if needed
+        image = cv2.imdecode(np.frombuffer(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
+        gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)
+        block_size = 8
+        percentage = 25
 
-        # Load image
-        image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
+        reconstructed_image, dct_columns = process_image_blocks(gray_image, block_size, percentage)
 
-        # Convert image to grayscale
-        gray_image =extract_msb( cv2.cvtColor(image, cv2.COLOR_BGR2GRAY),4)
-
-        # Define block size (e.g., 8x8)
-        block_size = (8, 8)
-
-        key_length = 16  # AES-128
-        secret_key = generate_secret_key(key_length)
-        key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
-       
-
-
-
-        # Call the function to process the image
-        dct_blocks_dict = divide_array_into_columns_with_dct(gray_image, block_size)
-
-        print(dct_blocks_dict)
-
-
-
-        columns_hashed = hash_dictionary(dct_blocks_dict)
-        encrypt_image=get_dictionary_elements(dct_blocks_dict,key)
         
-        encrypted_data_json = json.dumps(change_quotes_to_double(encrypt_image))
-         
+        original_shapes = {col_index: col.shape for col_index, col in dct_columns.items()}
+        print(original_shapes)
+        key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
 
-        # Create a new Block object and save it to the database
+
+
+        
+        reconstructed_image_d = reconstruct_image_from_dct_columns(dct_columns, image.shape[0], image.shape[1])
+
+        plt.imshow(reconstructed_image_d, cmap="gray")
+        plt.show()
+
+        columns_dict_with_double_quotes = change_quotes_to_double(dct_columns)
+        columns_hashed = hash_columns_dict(columns_dict_with_double_quotes)
+        
+        encrypted_columns = encrypt_dct_columns(columns_dict_with_double_quotes, key)
+
+        decrypted_columns = decrypt_dct_columns(encrypted_columns, key, original_shapes)
+
+        print(decrypted_columns)
         new_block = Block.objects.create(
             index=Block.objects.count(),
             data=columns_hashed,
-            encrypted_data =encrypted_data_json
-           
+            encrypted_data=encrypted_columns,
+            original_shapes=original_shapes
         )
 
-        # Log the length of the compressed image data for debugging
         logger.debug(f"Length of compressed image data: {len(columns_hashed)}")
+        reconstructed_image_base64 = base64.b64encode(reconstructed_image_d).decode('utf-8')
 
-        # Return success response with relevant data
-        return Response({'message': 'Image uploaded successfully', 'block_index': new_block.index}, status=status.HTTP_200_OK)
+        return Response({
+            'message': 'Image uploaded successfully',
+            'block_index': new_block.index,
+            'compressed_image': reconstructed_image_base64
+        }, status=status.HTTP_200_OK)
 
     except Exception as e:
         error_message = str(e)
         logger.error(f"Internal server error: {error_message}")
         return Response({'error': f'Internal server error: {error_message}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
 
-class ImageAddressViewSet(viewsets.ViewSet):   
+
+
+class ImageAddressViewSet(viewsets.ViewSet):
     def create(self, request):
         serializer = ImageAddressSerializer(data=request.data)
         image_file = request.FILES.get('image')
-        
 
-        
-        image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
-
-        gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY),4)
        
+        if not image_file:
+            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-                
+        image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
+        gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)
+
+        block_size = 8
+        percentage = 25  # Percentage of DCT coefficients to keep
+
+        # Process the image blocks
+        reconstructed_image, columns_dict = process_image_blocks(gray_image, block_size, percentage)
+
+        columns_dict_with_double_quotes = change_quotes_to_double(columns_dict)
+        columns_hashed1 = hash_columns_dict(columns_dict_with_double_quotes)
+
+
         # Define block size (e.g., 8x8)
         block_size = (8, 8)
 
-        # Call the function to process the image and hash
-        dct_blocks_dict = divide_array_into_columns_with_dct(gray_image, block_size)
-        # print('this is dct factor')
-        # print(dct_blocks_dict)
-        # print('=========================')
-        # print(dct_blocks_dict)
-        # columns_hashed1 = hash_dictionary(dct_blocks_dict)
-        # print('=========================')
-        # # print(columns_hashed1)
-
-        block_index = 1
-
-        block = Block.get_block_by_index(block_index)
-        block_hash = block.data
-        block_encrypted = block.encrypted_data 
-
-        block_encrypted_dic = json.loads(block_encrypted)
-        # dicripted=get_dictionary_elements2(block_encrypted)
-
-    
-
-        key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
         
-        difrence=compare_dictionaries(block_hash, columns_hashed1)
-        
+        block_index = 3
+
+        # Retrieve block data by index
+        block = Block.objects.get(index=block_index)
+        orginal_hash= eval(block.data)
+
+        difrence=compare_dictionaries(orginal_hash,columns_hashed1)
         print(difrence)
-
-        decrypted=get_dictionary_element2(block_encrypted_dic,difrence,key)
-
-        recoverd_image=replace_columns(dct_blocks_dict,decrypted)
-
-        # print(recoverd_image)
+        # Debugging prints to check the content
+         
+        original_shapes = eval(block.original_shapes)
         
-       
+        # Deserialize JSON string to dictionary
+        block_encrypted = eval(block.encrypted_data)  # Deserialize JSON string to dictionary
+
+        # Define your encryption key
+        key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
+
+        # Decrypt the columns
+        decrypted_columns = decrypt_dct_columns2(block_encrypted, key, original_shapes, difrence)
+        # print(decrypted_columns)
 
 
-        if not image_file:
-            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        recoverd_image=replace_columns(columns_dict,decrypted_columns)
+
+        reconstructed_image_d = reconstruct_image_from_dct_columns(recoverd_image, image.shape[0], image.shape[1])
+        plt.imshow(reconstructed_image_d, cmap="gray")
+        plt.show()
+
         if serializer.is_valid():
             filename = image_file.name
             return Response({"image": filename}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
