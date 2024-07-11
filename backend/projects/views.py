@@ -12,11 +12,32 @@ from projects.models import Block
 import base64
 import matplotlib.pyplot as plt
 
+import json
+import ast
+
+
+
+import cv2
+import numpy as np
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import base64
+import hashlib
+
+
 
 
 logger = logging.getLogger(__name__)
 
 
+def encode_bytes(obj):
+    if isinstance(obj, bytes):
+        return base64.b64encode(obj).decode('utf-8')
+    elif isinstance(obj, list):
+        return [encode_bytes(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: encode_bytes(value) for key, value in obj.items()}
+    return obj
 
 @api_view(['POST'])
 @transaction.atomic
@@ -29,44 +50,49 @@ def uploadImage(request):
         image = cv2.imdecode(np.frombuffer(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
         gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)
         block_size = 8
-        percentage = 25
+        percentage = 20
 
-        reconstructed_image, dct_columns = process_image_blocks(gray_image, block_size, percentage)
-
-        
-        original_shapes = {col_index: col.shape for col_index, col in dct_columns.items()}
-        print(original_shapes)
+        columns_dict = block_dct_zigzag(gray_image, block_size, percentage)
+        print((columns_dict))
         key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
 
 
 
-        
-        reconstructed_image_d = reconstruct_image_from_dct_columns(dct_columns, image.shape[0], image.shape[1])
+        reconstructed_image = reconstruct_image_from_columns(columns_dict, block_size, gray_image.shape)
 
-        plt.imshow(reconstructed_image_d, cmap="gray")
+
+        
+
+     
+        plt.imshow(reconstructed_image, cmap="gray")
         plt.show()
 
-        columns_dict_with_double_quotes = change_quotes_to_double(dct_columns)
-        columns_hashed = hash_columns_dict(columns_dict_with_double_quotes)
         
-        encrypted_columns = encrypt_dct_columns(columns_dict_with_double_quotes, key)
+        columns_hashed = hash_elements(columns_dict)
+        print(columns_dict)
+       
+        encrypted_columns = encrypt_dictionary(columns_dict, key)
+        # print(decrypt_dict(encrypted_columns))
+        
 
-        decrypted_columns = decrypt_dct_columns(encrypted_columns, key, original_shapes)
+        import json
+        import base64
 
-        print(decrypted_columns)
-        new_block = Block.objects.create(
-            index=Block.objects.count(),
+
+
+
+
+
+        block = Block(
+            
             data=columns_hashed,
-            encrypted_data=encrypted_columns,
-            original_shapes=original_shapes
+           
+            hash="current_hash_value"
         )
-
-        logger.debug(f"Length of compressed image data: {len(columns_hashed)}")
-        reconstructed_image_base64 = base64.b64encode(reconstructed_image_d).decode('utf-8')
-
+        block.save_encrypted_data(encrypted_columns)
         return Response({
             'message': 'Image uploaded successfully',
-            'block_index': new_block.index,
+            'block_index': block.index,
             'compressed_image': reconstructed_image_base64
         }, status=status.HTTP_200_OK)
 
@@ -90,49 +116,90 @@ class ImageAddressViewSet(viewsets.ViewSet):
         gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)
 
         block_size = 8
-        percentage = 25  # Percentage of DCT coefficients to keep
+        percentage = 20 # Percentage of DCT coefficients to keep
 
-        # Process the image blocks
-        reconstructed_image, columns_dict = process_image_blocks(gray_image, block_size, percentage)
-
-        columns_dict_with_double_quotes = change_quotes_to_double(columns_dict)
-        columns_hashed1 = hash_columns_dict(columns_dict_with_double_quotes)
+        columns_dict = block_dct_zigzag(gray_image, block_size, percentage)
+        # reconstructed_image = reconstruct_image_from_columns(columns_dict, block_size, gray_image.shape)
 
 
-        # Define block size (e.g., 8x8)
-        block_size = (8, 8)
+
+       
+
+
+
+        #print(columns_dict)
+      
+        key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
+
+
 
         
-        block_index = 3
+        # plt.imshow(reconstructed_image, cmap="gray")
+        # plt.show()
+
+        
+        columns_hashed2 = hash_indices(columns_dict)
+
+        print(columns_hashed2)
+        
+
+
+        block_index = 4
 
         # Retrieve block data by index
         block = Block.objects.get(index=block_index)
         orginal_hash= eval(block.data)
 
-        difrence=compare_dictionaries(orginal_hash,columns_hashed1)
+        # print(orginal_hash)
+        print('--------------------------------')
+        decrypted_block = block.deserialize_encrypted_data()
+        decrypted_data = {int(key): value for key, value in decrypted_block.items()}
+
+        
+        difrence=compare_dicts(orginal_hash,columns_hashed2)
         print(difrence)
         # Debugging prints to check the content
          
-        original_shapes = eval(block.original_shapes)
+     
         
         # Deserialize JSON string to dictionary
-        block_encrypted = eval(block.encrypted_data)  # Deserialize JSON string to dictionary
 
         # Define your encryption key
         key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
 
-        # Decrypt the columns
-        decrypted_columns = decrypt_dct_columns2(block_encrypted, key, original_shapes, difrence)
+        
+        decrypted_columns = (format_dict_without_quotes(decrypt_dictionary(decrypted_data,key,difrence)))
+
+       
+
+        array = np.array
+        float32 = np.float32
+
+        decrypted_columns = decrypted_columns.replace('\n', '').replace(' ', '')
+        decrypted_columns=eval(decrypted_columns)
+        
         # print(decrypted_columns)
+        
+        
+        
+        recovered_columns = replace_values(columns_dict,decrypted_columns)
+        # print(recovered_columns)
 
+        
 
+        
+        reconstructed_image = reconstruct_image_from_columns((recovered_columns), block_size, gray_image.shape)
 
-        recoverd_image=replace_columns(columns_dict,decrypted_columns)
-
-        reconstructed_image_d = reconstruct_image_from_dct_columns(recoverd_image, image.shape[0], image.shape[1])
-        plt.imshow(reconstructed_image_d, cmap="gray")
+        plt.imshow(reconstructed_image, cmap="gray")
         plt.show()
 
+
+
+        
+        # print(reconstructed_image)
+
+
+       
         if serializer.is_valid():
             filename = image_file.name
             return Response({"image": filename}, status=status.HTTP_200_OK)

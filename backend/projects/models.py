@@ -2,7 +2,7 @@ from django.db import models
 
 import hashlib
 import json
-
+from jsonfield import JSONField
 # Create your models here.
 class Gallery(models.Model):
     image = models.ImageField(null=True, blank=True)
@@ -20,13 +20,47 @@ class Block(models.Model):
     data = models.TextField()
     previous_hash = models.CharField(max_length=64)
     hash = models.CharField(max_length=64)
-    encrypted_data = models.TextField(null=True, blank=True)
+    encrypted_data = JSONField(null=True, blank=True)
     original_shapes=models.TextField(null=True, blank=True)
     
           # New field for encrypted data
 
     def __str__(self):
         return f"Block {self.index}"
+    
+
+    def save_encrypted_data(self, encrypted_data):
+        """
+        Serialize and save encrypted_data to the model instance.
+        """
+        # Implement your serialization logic here
+        serialized_data = self.serialize_encrypted_data(encrypted_data)
+        self.encrypted_data = serialized_data
+        self.save()
+
+    def serialize_encrypted_data(self, encrypted_data):
+        """
+        Serialize encrypted_data into a format suitable for storage.
+        """
+        serialized_data = {}  # You can customize this based on your data structure
+        for key, value in encrypted_data.items():
+            serialized_data[key] = (
+                value[0].hex(),  # Convert bytes to hexadecimal string for storage
+                value[1].hex()
+            )
+        return serialized_data
+
+    def deserialize_encrypted_data(self):
+        """
+        Deserialize encrypted_data back into its original format.
+        """
+        decrypted_data = {}
+        for key, value in self.encrypted_data.items():
+            decrypted_data[key] = (
+                bytes.fromhex(value[0]),  # Convert hexadecimal string back to bytes
+                bytes.fromhex(value[1])
+            )
+        return decrypted_data
 
     def calculate_hash(self):
         block_string = json.dumps({
