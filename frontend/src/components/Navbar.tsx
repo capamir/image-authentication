@@ -17,7 +17,7 @@ import { logo } from "../assets";
 import { RiMenu3Line } from "react-icons/ri";
 import { IconType } from "react-icons";
 import { IoHomeOutline } from "react-icons/io5";
-import { FaRegQuestionCircle } from "react-icons/fa";
+
 import { MdOutlineCloudUpload } from "react-icons/md";
 
 interface LinkType {
@@ -32,11 +32,7 @@ const links: LinkType[] = [
     href: "#home",
     icon: IoHomeOutline,
   },
-  {
-    label: "what is gpt3",
-    href: "#wgpt3",
-    icon: FaRegQuestionCircle,
-  },
+ 
   {
     label: "upload",
     href: "#upload",
@@ -56,9 +52,7 @@ const Navbar = () => {
       paddingX={{ base: "2rem", md: "4rem", lg: "6rem" }}
       alignItems="center"
     >
-      <Link href="/" marginRight="3rem">
-        <Image src={logo} alt="logo" width="62.56px" height="16.02px" />
-      </Link>
+  
       <Show above="lg">
         <HStack gap={6}>
           {links.map((item, index) => (

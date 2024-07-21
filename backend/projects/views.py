@@ -30,14 +30,7 @@ import hashlib
 logger = logging.getLogger(__name__)
 
 
-def encode_bytes(obj):
-    if isinstance(obj, bytes):
-        return base64.b64encode(obj).decode('utf-8')
-    elif isinstance(obj, list):
-        return [encode_bytes(item) for item in obj]
-    elif isinstance(obj, dict):
-        return {key: encode_bytes(value) for key, value in obj.items()}
-    return obj
+
 
 @api_view(['POST'])
 @transaction.atomic
@@ -50,7 +43,7 @@ def uploadImage(request):
         image = cv2.imdecode(np.frombuffer(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
         gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)
         block_size = 8
-        percentage = 20
+        percentage = 15
 
         columns_dict = block_dct_zigzag(gray_image, block_size, percentage)
         print((columns_dict))
@@ -68,8 +61,8 @@ def uploadImage(request):
         plt.show()
 
         
-        columns_hashed = hash_elements(columns_dict)
-        print(columns_dict)
+        columns_hashed = hashed_columns_dict(columns_dict)
+        # print(columns_dict)
        
         encrypted_columns = encrypt_dictionary(columns_dict, key)
         # print(decrypt_dict(encrypted_columns))
@@ -82,6 +75,7 @@ def uploadImage(request):
 
 
 
+        Block.create_genesis_block()
 
         block = Block(
             
@@ -93,7 +87,7 @@ def uploadImage(request):
         return Response({
             'message': 'Image uploaded successfully',
             'block_index': block.index,
-            'compressed_image': reconstructed_image_base64
+            'compressed_image': reconstructed_image
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -107,6 +101,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
     def create(self, request):
         serializer = ImageAddressSerializer(data=request.data)
         image_file = request.FILES.get('image')
+        adress = request.FILES.get('address')
 
        
         if not image_file:
@@ -116,55 +111,49 @@ class ImageAddressViewSet(viewsets.ViewSet):
         gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)
 
         block_size = 8
-        percentage = 20 # Percentage of DCT coefficients to keep
+        percentage =15# Percentage of DCT coefficients to keep
 
         columns_dict = block_dct_zigzag(gray_image, block_size, percentage)
         # reconstructed_image = reconstruct_image_from_columns(columns_dict, block_size, gray_image.shape)
-
-
-
-       
-
-
 
         #print(columns_dict)
       
         key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
 
-
+        print (adress)
 
         
         # plt.imshow(reconstructed_image, cmap="gray")
         # plt.show()
 
         
-        columns_hashed2 = hash_indices(columns_dict)
+        columns_hashed2 = hashed_columns_dict(columns_dict)
 
         print(columns_hashed2)
         
 
 
-        block_index = 4
+        block_index =11
 
-        # Retrieve block data by index
+        # # Retrieve block data by indexmnf number
         block = Block.objects.get(index=block_index)
         orginal_hash= eval(block.data)
 
-        # print(orginal_hash)
         print('--------------------------------')
+        # print(orginal_hash)
         decrypted_block = block.deserialize_encrypted_data()
         decrypted_data = {int(key): value for key, value in decrypted_block.items()}
 
-        
+      
         difrence=compare_dicts(orginal_hash,columns_hashed2)
         print(difrence)
-        # Debugging prints to check the content
+        # # Debugging prints to check the content
          
      
         
-        # Deserialize JSON string to dictionary
+        # # Deserialize JSON string to dictionary
 
-        # Define your encryption key
+        # # Define your encryption key
         key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
 
         

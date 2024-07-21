@@ -234,20 +234,28 @@ def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
 
 import hashlib
 
-import json
 
 
-def hash_indices(data):
-    hashed_data = {}
-    for key in data:
-        # Convert key to string and hash with SHA-256
-        key_str = str(key)
-        hashed_key = hashlib.sha256(key_str.encode()).hexdigest()
-        # Store hashed key and corresponding value in hashed_data
-        hashed_data[hashed_key] = data[key]
-    return hashed_data
 
 
+
+def hashed_columns_dict(input_dict):
+    hashed_dict = {}
+    
+    for key, value_list in input_dict.items():
+        concatenated_str = ""
+        for arr in value_list:
+            for element in arr:
+                element_str = str(element)
+                concatenated_str += element_str
+        
+        # Compute SHA-256 hash of concatenated_str
+        hash_value = hashlib.sha256(concatenated_str.encode()).hexdigest()
+        
+        # Store hash_value in hashed_dict
+        hashed_dict[key] = hash_value
+    
+    return hashed_dict
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.backends import default_backend
@@ -307,12 +315,22 @@ def decrypt_dictionary(encrypted_dict, key, indices):
 
 
 
+
+
 def compare_dicts(dict1, dict2):
-    differences = []
+    differing_keys = []
     for key in dict1:
-        if dict1[key] != dict2.get(key):
-            differences.append(key)
-    return differences
+        if key in dict2:
+            if str(dict2[key]) != str(dict1[key]) :
+                differing_keys.append(key)
+
+
+    for key in dict2:
+        if key not in dict1:
+            if str(dict2[key]) != str(dict1[key]) :
+                differing_keys.append(key)
+    
+    return differing_keys
 
 
 

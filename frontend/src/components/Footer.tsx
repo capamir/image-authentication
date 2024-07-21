@@ -17,125 +17,37 @@ const Footer = () => {
       <SimpleGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} spacing={8}>
         <Box>
           <Heading as="h3" fontFamily="fontBold" fontSize="lg" marginBottom={6}>
-            درباره ما
+            about us
           </Heading>
           <Text fontFamily="fontBody" fontSize="md" color="gray">
-            سبزلرن یک اکادمی خصوصی آموزش برنامه نویسی هست که با هدف تحویل نیروی
-            متخصص بر پایه تولید محتوای غیرسطحی فعالیت میکند
-          </Text>
+          At Image Authentication Site, we specialize in verifying the authenticity of digital images. Our advanced technology and expert team provide reliable analysis and comprehensive reports to ensure your images are genuine. Trust us to protect the integrity of your visual content.          </Text>
         </Box>
+
         <Box>
           <Heading as="h3" fontFamily="fontBold" fontSize="lg" marginBottom={6}>
-            دسترسی سریع
+          Our Team
           </Heading>
-          <Link>
-            <Text
-              fontFamily="fontBold"
-              fontSize="md"
-              color="gray"
-              marginBottom={3}
-            >
-              قوانین و مقررات
-            </Text>
-          </Link>
-          <Link>
-            <Text
-              fontFamily="fontBold"
-              fontSize="md"
-              color="gray"
-              marginBottom={3}
-            >
-              ارسال تیکت
-            </Text>
-          </Link>
-          <Link>
-            <Text
-              fontFamily="fontBold"
-              fontSize="md"
-              color="gray"
-              marginBottom={3}
-            >
-              همه دوره ها
-            </Text>
-          </Link>
-        </Box>
-        <Box>
-          <Heading as="h3" fontFamily="fontBold" fontSize="lg" marginBottom={6}>
-            لینک های مفید
-          </Heading>
-          <Link>
-            <Text
-              fontFamily="fontBold"
-              fontSize="md"
-              color="gray"
-              marginBottom={3}
-            >
-              آموزش پایتون
-            </Text>
-          </Link>
-          <Link>
-            <Text
-              fontFamily="fontBold"
-              fontSize="md"
-              color="gray"
-              marginBottom={3}
-            >
-              آموزش پایتون
-            </Text>
-          </Link>
-          <Link>
-            <Text
-              fontFamily="fontBold"
-              fontSize="md"
-              color="gray"
-              marginBottom={3}
-            >
-              آموزش پایتون
-            </Text>
-          </Link>
-          <Link>
-            <Text
-              fontFamily="fontBold"
-              fontSize="md"
-              color="gray"
-              marginBottom={3}
-            >
-              آموزش پایتون
-            </Text>
-          </Link>
-        </Box>
-        <Box>
-          <Heading as="h3" fontFamily="fontBold" fontSize="lg" marginBottom={6}>
-            شبکه های اجتماعی
-          </Heading>
-          <Link>
-            <HStack
-              fontFamily="fontBold"
-              fontSize="lg"
-              color="gray"
-              marginBottom={3}
-            >
-              <FaTelegram size={24} color="#0693e3" />
-              <Text>آموزش پایتون</Text>
-            </HStack>
-          </Link>
-          <Link>
-            <HStack
-              fontFamily="fontBold"
-              fontSize="lg"
-              color="gray"
-              marginBottom={3}
-            >
-              <FaTelegram size={24} color="#0693e3" />
-              <Text>آموزش پایتون</Text>
-            </HStack>
-          </Link>
+          <Text fontFamily="fontBody" fontSize="md" color="gray">
+          dr.tabatabaie 
+                 </Text>
+                 <Text fontFamily="fontBody" fontSize="md" color="gray">
+          amir
+                 </Text>
+                 <Text fontFamily="fontBody" fontSize="md" color="gray">
+          matin
+                 </Text>
+
+            
+           
+
+        
+          
         </Box>
       </SimpleGrid>
       <Divider />
       <Flex gap={5} paddingTop={5} direction={{ base: "column", md: "row" }}>
         <Text fontFamily="fontBold" fontSize="md">
-          Created by Capamir
+          our team
         </Text>
         <Spacer />
         <Text fontFamily="fontBold" fontSize="md">

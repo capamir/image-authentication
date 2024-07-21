@@ -95,7 +95,7 @@ const UploaderKey = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          We promise to keep your images safe
+          authenticate your image 
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl marginY={5}>
