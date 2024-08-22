@@ -1,12 +1,12 @@
 
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
+import os
 import cv2
 import numpy as np
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-import base64
 import hashlib
-
-
+import secrets
 
 def extract_msb(image_array, k):
     try:
@@ -96,6 +96,16 @@ def zigzag(input, percentage):
     return output
 
 def block_dct_zigzag(image, block_size, zigzag_percentage):
+
+    quantization_matrix = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
+                                        [12, 12, 14, 19, 26, 58, 60, 55],
+                                        [14, 13, 16, 24, 40, 57, 69, 56],
+
+                                        [14, 17, 22, 29, 51, 87, 80, 62],
+                                        [18, 22, 37, 56, 68, 109, 103, 77],
+                                        [24, 35, 55, 64, 81, 104, 113, 92],
+                                        [49, 64, 78, 87, 103, 121, 120, 101],
+                                        [72, 92, 95, 98, 112, 100, 103, 99]])
     h, w = image.shape[:2]
     num_blocks_h = h // block_size
     num_blocks_w = w // block_size
@@ -105,19 +115,17 @@ def block_dct_zigzag(image, block_size, zigzag_percentage):
     for i in range(num_blocks_h):
         for j in range(num_blocks_w):
             block = image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
-            dct_block = cv2.dct(block.astype(np.float32))
-            zigzag_block = zigzag(dct_block, zigzag_percentage)
+            block_dct = cv2.dct(np.float32(block))
+        
+            block_dct_quantized = np.round(block_dct / quantization_matrix) * quantization_matrix
+
+            zigzag_block = zigzag(block_dct_quantized, zigzag_percentage)
+            zigzag_block = np.abs(zigzag_block) 
             columns_dict[j].append(zigzag_block)
+
+        
     
     return columns_dict
-
-
-
-
-import numpy as np
-import cv2
-
-
 
 def inverse_zigzag(input_1d, shape):
     vmax, hmax = shape
@@ -177,7 +185,6 @@ def inverse_zigzag(input_1d, shape):
 
     return output
 
-
 def format_dict_without_quotes(input_dict):
     formatted_pairs = []
     for key, value in input_dict.items():
@@ -191,9 +198,6 @@ def format_dict_without_quotes(input_dict):
     # Join formatted pairs with commas and enclose in curly braces
     formatted_output = "{" + ", ".join(formatted_pairs) + "}"
     return formatted_output
-
-import numpy as np
-import cv2
 
 
 def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
@@ -228,38 +232,20 @@ def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
     return reconstructed_image
 
 
+def hash_dictionary_elements_sha256(input_dict):
 
-
-
-
-import hashlib
-
-
-
-
-
-
-def hashed_columns_dict(input_dict):
     hashed_dict = {}
     
-    for key, value_list in input_dict.items():
-        concatenated_str = ""
-        for arr in value_list:
-            for element in arr:
-                element_str = str(element)
-                concatenated_str += element_str
-        
-        # Compute SHA-256 hash of concatenated_str
-        hash_value = hashlib.sha256(concatenated_str.encode()).hexdigest()
-        
-        # Store hash_value in hashed_dict
-        hashed_dict[key] = hash_value
+    for key, value in input_dict.items():
+        # Ensure the value is a string before hashing
+        value_str = str(value)
+        hash_obj = hashlib.sha256()
+        hash_obj.update(value_str.encode('utf-8'))
+        hashed_value = hash_obj.hexdigest()
+        hashed_dict[key] = hashed_value
     
     return hashed_dict
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.backends import default_backend
-import os
+
 
 def encrypt_dictionary(dictionary, key):
     encrypted_dict = {}
@@ -278,15 +264,6 @@ def encrypt_dictionary(dictionary, key):
         encrypted_dict[k] = (iv, encrypted_data)
     
     return encrypted_dict
-
-
-
-
-
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
-import base64
-import numpy as np
 
 
 def decrypt_dictionary(encrypted_dict, key, indices):
@@ -313,10 +290,6 @@ def decrypt_dictionary(encrypted_dict, key, indices):
     
     return decrypted_dict
 
-
-
-
-
 def compare_dicts(dict1, dict2):
     differing_keys = []
     for key in dict1:
@@ -332,14 +305,18 @@ def compare_dicts(dict1, dict2):
     
     return differing_keys
 
-
-
-
 def replace_values(dict1, dict2):
     for key in dict2:
         if key in dict1:
             dict1[key] = dict2[key]
     return dict1
+
+def generate_secret_key(length):
+
+    if length not in [16, 24, 32]:
+        raise ValueError("Key length must be 16, 24, or 32 bytes (corresponding to AES-128, AES-192, or AES-256)")
+
+    return secrets.token_bytes(length)
 
 
 
