@@ -20,6 +20,14 @@ import { IoHomeOutline } from "react-icons/io5";
 
 import { MdOutlineCloudUpload } from "react-icons/md";
 
+import { MdOutlineRoomPreferences } from "react-icons/md";
+
+import { RiTeamLine } from "react-icons/ri";
+
+
+import { MdOutlineContactPhone } from "react-icons/md";
+
+
 interface LinkType {
   label: string;
   href: string;
@@ -34,14 +42,19 @@ const links: LinkType[] = [
   },
  
   {
-    label: "upload",
+    label: "how it is works ",
     href: "#upload",
-    icon: MdOutlineCloudUpload,
+    icon: MdOutlineRoomPreferences,
   },
   {
-    label: "features",
+    label: "about",
     href: "#features",
-    icon: MdOutlineCloudUpload,
+    icon: RiTeamLine,
+  },
+  {
+    label: "contact",
+    href: "#features",
+    icon: MdOutlineContactPhone,
   },
 ];
 
@@ -74,32 +87,7 @@ const Navbar = () => {
         </HStack>
       </Show>
       <Spacer />
-      <HStack gap={3}>
-        <Link
-          color="#fff"
-          fontSize="18px"
-          fontWeight="500"
-          lineHeight="25px"
-          textTransform="capitalize"
-        >
-          Sign in
-        </Link>
-        <Button
-          paddingY="0.5rem"
-          paddingX="1rem"
-          color="#fff"
-          background="#FF4820"
-          fontSize="18px"
-          fontWeight="500"
-          lineHeight="25px"
-          border="none"
-          outline="none"
-          cursor="pointer"
-          borderRadius="md"
-        >
-          Sign up
-        </Button>
-      </HStack>
+
       <Show below="lg">
         <Menu>
           <MenuButton as={Box} cursor="pointer" color="white" marginLeft={3}>

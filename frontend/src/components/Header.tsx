@@ -39,16 +39,17 @@ const Header = () => {
         <Text
           fontWeight="400"
           fontSize={{ base: "14px", md: "16px", lg: "20px" }}
-          marginTop="-25%"
+          marginTop="-30%"
           lineHeight={{ base: "24px", lg: "28px" }}
-          color="text"
+          color="white"
         >
-          The prototype archive we present here is a glimpse into a future where digital photos are transformed by advanced cryptography and decentralized web protocols.
-        </Text>
+        Image Authentication: Secure Your Images with Hash Generation
+        Ensure the authenticity and integrity of your images with hash generation. This process creates a unique digital fingerprint for each image, allowing you to detect any unauthorized modifications and protect your digital assets from tampering.        </Text>
       
       </Box>
-      <Box flex="1">
-        <Image  src={ai} alt="ai" width="100%" height="100%" />
+      
+      <Box flex="1" marginLeft='30%'>
+        <Image  src={ai} alt="ai" width="400px"  height='300px' margin-left='200px' />
       </Box>
     </Flex>
   );
