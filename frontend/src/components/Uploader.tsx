@@ -11,6 +11,8 @@ import {
   Spacer,
   Spinner,
   Text,
+  FormLabel,
+  Input,
 } from "@chakra-ui/react";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -24,6 +26,7 @@ const Uploader = () => {
   const [file, setFile] = useState<FileType>();
   const [isUploading, setIsUploading] = useState(false);
   const [compressedImage, setCompressedImage] = useState("");
+  const [percentage, setpercentage] = useState(""); 
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles?.length) {
@@ -94,7 +97,7 @@ const Uploader = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          We promise to keep your images safe
+          upload  image  
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl
@@ -118,6 +121,12 @@ const Uploader = () => {
               </Text>
             )}
           </FormControl>
+          <FormControl marginY={5}>
+            <FormLabel>Adjust the DCT coefficient retention percentage: </FormLabel>
+            <Input type="text" onChange={(e) => setpercentage(e.target.value)} />
+          </FormControl>
+          
+          
           <Button
             type="submit"
             paddingY="0.5rem"

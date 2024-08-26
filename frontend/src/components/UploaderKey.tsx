@@ -9,13 +9,14 @@ import {
   Heading,
   Image,
   Input,
-  Spacer,
+
   Spinner,
   Text,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import * as React from 'react';
 
 interface FileType {
   preview: string;
@@ -26,6 +27,9 @@ const UploaderKey = () => {
   const [file, setFile] = useState<FileType>();
   const [address, setAddress] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [checked, setChecked] = React.useState(false);
+
+
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles?.length) {
@@ -95,13 +99,19 @@ const UploaderKey = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          authenticate your image 
+          verification  image 
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl marginY={5}>
-            <FormLabel>Block Address</FormLabel>
+            <FormLabel> Enter block address:</FormLabel>
             <Input type="text" onChange={(e) => setAddress(e.target.value)} />
           </FormControl>
+
+          <FormControl marginY={5}>
+            <FormLabel>Enter the DCT coefficient retention percentage:</FormLabel>
+            <Input type="text" onChange={(e) => setAddress(e.target.value)} />
+          </FormControl>
+
           <FormControl
             marginX="auto"
             p={4}
@@ -112,6 +122,7 @@ const UploaderKey = () => {
             textAlign="center"
             cursor="pointer"
             height="150px"
+            marginBottom='15px'
             {...getRootProps()}
           >
             <input {...getInputProps()} />
@@ -123,6 +134,29 @@ const UploaderKey = () => {
               </Text>
             )}
           </FormControl>
+
+
+
+        <div>
+          <label>
+            <input
+
+              type="checkbox"
+              checked={checked}
+              />
+              <text >  Do you want image to be restored?
+
+            </text>
+              
+          </label>
+        </div>
+
+        <FormControl marginY={5}>
+            <FormLabel>Enter your key</FormLabel>
+            <Input type="text" onChange={(e) => setpercentage(e.target.value)} />
+
+          </FormControl>
+          
           <Button
             type="submit"
             paddingY="0.5rem"
