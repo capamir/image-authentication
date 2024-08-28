@@ -29,7 +29,7 @@ def uploadImage(request):
 
         columns_dict = block_dct_zigzag(gray_image, block_size, percentage)
 
-        key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
+        key = generate_secret_key(16)
 
         reconstructed_image = reconstruct_image_from_columns(columns_dict, block_size, gray_image.shape)
 
@@ -56,6 +56,8 @@ def uploadImage(request):
         return Response({
             'message': 'Image uploaded successfully',
             'block_index': block.index,
+            'key':key,
+            'percentage':percentage,
             'compressed_image': reconstructed_image
         }, status=status.HTTP_200_OK)
 
@@ -88,7 +90,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
         # print(columns_dict)
       
-        key = b'_^4\x887ja\xb0\xdd\x97"\xc2\x82\xcb\x0fc'
+       
 
         # print (adress)
 
