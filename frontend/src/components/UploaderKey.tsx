@@ -3,20 +3,20 @@ import {
   Button,
   Card,
   CardBody,
+  Collapse,
   Flex,
   FormControl,
   FormLabel,
   Heading,
   Image,
   Input,
-
   Spinner,
   Text,
+  useDisclosure,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import * as React from 'react';
 
 interface FileType {
   preview: string;
@@ -26,10 +26,11 @@ interface FileType {
 const UploaderKey = () => {
   const [file, setFile] = useState<FileType>();
   const [address, setAddress] = useState("");
+  const [dct, setDct] = useState("");
+  const [key, setKey] = useState("");
+
   const [isUploading, setIsUploading] = useState(false);
-  const [checked, setChecked] = React.useState(false);
-
-
+  const { isOpen, onToggle } = useDisclosure();
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles?.length) {
@@ -52,6 +53,8 @@ const UploaderKey = () => {
     const formData = new FormData();
     formData.append("image", file);
     formData.append("address", address);
+    formData.append("dct", dct);
+    if (key) formData.append("key", key);
 
     setIsUploading(true);
     try {
@@ -75,7 +78,6 @@ const UploaderKey = () => {
 
   const resetFiles = () => {
     setFile({} as FileType);
-    setCompressedImage("");
     setIsUploading(false);
   };
 
@@ -99,17 +101,27 @@ const UploaderKey = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          verification  image 
+          verification image
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl marginY={5}>
             <FormLabel> Enter block address:</FormLabel>
-            <Input type="text" onChange={(e) => setAddress(e.target.value)} />
+            <Input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
           </FormControl>
 
           <FormControl marginY={5}>
-            <FormLabel>Enter the DCT coefficient retention percentage:</FormLabel>
-            <Input type="text" onChange={(e) => setAddress(e.target.value)} />
+            <FormLabel>
+              Enter the DCT coefficient retention percentage:
+            </FormLabel>
+            <Input
+              type="text"
+              value={dct}
+              onChange={(e) => setDct(e.target.value)}
+            />
           </FormControl>
 
           <FormControl
@@ -122,7 +134,7 @@ const UploaderKey = () => {
             textAlign="center"
             cursor="pointer"
             height="150px"
-            marginBottom='15px'
+            marginBottom="15px"
             {...getRootProps()}
           >
             <input {...getInputProps()} />
@@ -135,28 +147,23 @@ const UploaderKey = () => {
             )}
           </FormControl>
 
-
-
-        <div>
-          <label>
-            <input
-
-              type="checkbox"
-              checked={checked}
+          <div>
+            <label>
+              <input type="checkbox" checked={isOpen} onChange={onToggle} />
+              <Text> Do you want image to be restored?</Text>
+            </label>
+          </div>
+          <Collapse in={isOpen} animateOpacity>
+            <FormControl marginY={5}>
+              <FormLabel>Enter your key</FormLabel>
+              <Input
+                type="text"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
               />
-              <text >  Do you want image to be restored?
+            </FormControl>
+          </Collapse>
 
-            </text>
-              
-          </label>
-        </div>
-
-        <FormControl marginY={5}>
-            <FormLabel>Enter your key</FormLabel>
-            <Input type="text" onChange={(e) => setpercentage(e.target.value)} />
-
-          </FormControl>
-          
           <Button
             type="submit"
             paddingY="0.5rem"

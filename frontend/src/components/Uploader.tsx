@@ -26,7 +26,7 @@ const Uploader = () => {
   const [file, setFile] = useState<FileType>();
   const [isUploading, setIsUploading] = useState(false);
   const [compressedImage, setCompressedImage] = useState("");
-  const [percentage, setpercentage] = useState(""); 
+  const [percentage, setpercentage] = useState("");
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles?.length) {
@@ -48,6 +48,8 @@ const Uploader = () => {
   const uploading = async () => {
     const formData = new FormData();
     formData.append("image", file);
+    formData.append("percentage", percentage);
+
     setIsUploading(true);
     try {
       const config = {
@@ -60,7 +62,7 @@ const Uploader = () => {
         formData,
         config
       );
-
+      console.log(data);
       // Set compressed image data
       const compressedImageData = `data:image/jpeg;base64,${data}`;
       setCompressedImage(compressedImageData);
@@ -97,7 +99,7 @@ const Uploader = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          upload  image  
+          upload image
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl
@@ -122,11 +124,16 @@ const Uploader = () => {
             )}
           </FormControl>
           <FormControl marginY={5}>
-            <FormLabel>Adjust the DCT coefficient retention percentage: </FormLabel>
-            <Input type="text" onChange={(e) => setpercentage(e.target.value)} />
+            <FormLabel>
+              Adjust the DCT coefficient retention percentage:{" "}
+            </FormLabel>
+            <Input
+              type="text"
+              value={percentage}
+              onChange={(e) => setpercentage(e.target.value)}
+            />
           </FormControl>
-          
-          
+
           <Button
             type="submit"
             paddingY="0.5rem"
