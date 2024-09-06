@@ -13,41 +13,45 @@ import {
   Text,
   FormLabel,
   Input,
+  useToast,
 } from "@chakra-ui/react";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
-interface FileType {
-  preview: string;
-  name: string;
-}
-
 const Uploader = () => {
-  const [file, setFile] = useState<FileType>();
-  const [isUploading, setIsUploading] = useState(false);
-  const [compressedImage, setCompressedImage] = useState("");
-  const [percentage, setpercentage] = useState("");
-
-  const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles?.length) {
-      setFile(
-        Object.assign(acceptedFiles[0], {
-          preview: URL.createObjectURL(acceptedFiles[0]),
-        })
-      );
-    }
-  }, []);
+  const [file, setFile] = useState<File | undefined>(undefined);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [percentage, setPercentage] = useState<string>("");
+  const [compressedImageUrl, setCompressedImageUrl] = useState<string>("");
+  const toast = useToast();
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      "image/*": [],
+    accept: "image/*",
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles?.length) {
+        setFile(
+          Object.assign(acceptedFiles[0], {
+            preview: URL.createObjectURL(acceptedFiles[0]),
+          })
+        );
+      }
     },
-    onDrop,
   });
 
   const uploading = async () => {
+    if (!file) {
+      toast({
+        title: "No file selected",
+        description: "Please select a file before submitting.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("image", file as Blob);
     formData.append("percentage", percentage);
 
     setIsUploading(true);
@@ -57,29 +61,51 @@ const Uploader = () => {
           "Content-Type": "multipart/form-data",
         },
       };
+
       const { data } = await axios.post(
         "http://127.0.0.1:8000/api/products/upload/",
         formData,
         config
       );
-      console.log(data);
-      // Set compressed image data
-      const compressedImageData = `data:image/jpeg;base64,${data}`;
-      setCompressedImage(compressedImageData);
+
+      if (data) {
+        // Correctly format the Base64 string for the image source
+        setCompressedImageUrl(`data:image/png;base64,${data.compressed_image}`);
+        toast({
+          title: "Upload successful ",
+          description: (
+            <Box>
+              <Text>Percentage: {data.percentage}</Text>
+              <Text>Image Key: {data.key}</Text>
+              <Text>Block Index: {data.block_index}</Text>
+            </Box>
+          ),
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
     } catch (error) {
-      console.log(error.message);
+      console.error("Error uploading image:", error.response?.data?.error || error.message);
+      toast({
+        title: "Upload failed",
+        description: error.response?.data?.error || "There was an error uploading your image.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsUploading(false);
     }
   };
 
   const resetFiles = () => {
-    setFile({} as FileType);
-    setCompressedImage("");
+    setFile(undefined);
+    setCompressedImageUrl("");
     setIsUploading(false);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     uploading();
   };
@@ -130,7 +156,7 @@ const Uploader = () => {
             <Input
               type="text"
               value={percentage}
-              onChange={(e) => setpercentage(e.target.value)}
+              onChange={(e) => setPercentage(e.target.value)}
             />
           </FormControl>
 
@@ -186,10 +212,10 @@ const Uploader = () => {
             <Heading as="h3" fontSize="25px" marginTop={3}>
               compressed image
             </Heading>
-            {compressedImage && (
+            {compressedImageUrl && (
               <Card width="300px" marginY={4}>
                 <CardBody>
-                  <Image src={compressedImage} alt="compressedImage" />
+                  <Image src={compressedImageUrl} alt="compressedImage" />
                 </CardBody>
               </Card>
             )}
