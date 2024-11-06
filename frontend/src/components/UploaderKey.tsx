@@ -27,7 +27,7 @@ const UploaderKey = () => {
   const [file, setFile] = useState<FileType>();
   const [address, setAddress] = useState("");
   const [dct, setDct] = useState("");
-  const [key, setKey] = useState("");
+  const [keyFile, setKeyFile] = useState<FileType | null>(null);
 
   const [isUploading, setIsUploading] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
@@ -49,12 +49,26 @@ const UploaderKey = () => {
     onDrop,
   });
 
+  const handleKeyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setKeyFile(
+        Object.assign(selectedFile, {
+          preview: URL.createObjectURL(selectedFile),
+        })
+      );
+    }
+  };
+
   const uploading = async () => {
+    if (!file) return;
+
     const formData = new FormData();
     formData.append("image", file);
     formData.append("address", address);
     formData.append("dct", dct);
-    if (key) formData.append("key", key);
+
+    if (keyFile) formData.append("key", keyFile);
 
     setIsUploading(true);
     try {
@@ -78,6 +92,7 @@ const UploaderKey = () => {
 
   const resetFiles = () => {
     setFile({} as FileType);
+    setKeyFile(null);
     setIsUploading(false);
   };
 
@@ -155,12 +170,8 @@ const UploaderKey = () => {
           </div>
           <Collapse in={isOpen} animateOpacity>
             <FormControl marginY={5}>
-              <FormLabel>Enter your key</FormLabel>
-              <Input
-                type="text"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-              />
+              <FormLabel>Upload your key file</FormLabel>
+              <Input type="file" onChange={handleKeyFileChange} padding={2} />
             </FormControl>
           </Collapse>
 
