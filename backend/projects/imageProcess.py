@@ -1,12 +1,16 @@
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.backends import default_backend
-import os
+
+
 import cv2
 import numpy as np
 import hashlib
 import secrets
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Random import get_random_bytes
+import base64
+
+import json
 
 def extract_msb(image_array, k):
     try:
@@ -248,49 +252,10 @@ def hash_dictionary_elements_sha256(input_dict):
 
 
 
-def encrypt_array(array, key):
-    # Convert the array to bytes
-    byte_data = array.tobytes()
-    
-    # AES encryption
-    cipher = AES.new(key, AES.MODE_CBC)
-    ciphertext = cipher.encrypt(pad(byte_data, AES.block_size))
-    
-    # Encode the ciphertext to base64 for sending
-    ciphertext_encoded = base64.b64encode(ciphertext).decode('utf-8')
-    
-    return ciphertext_encoded
-
-def decrypt_array(encrypted_data, key):
-    # Decode the base64 encoded encrypted data
-    ciphertext = base64.b64decode(encrypted_data)
-    
-    # AES decryption
-    cipher = AES.new(key, AES.MODE_CBC)
-    decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
-    
-    # Convert bytes back to numpy array
-    return np.frombuffer(decrypted_data, dtype=np.float32)
-
-def encrypt_dict(data, key):
-    encrypted_dict = {}
-    for k, arrays in data.items():
-        encrypted_arrays = []
-        for array in arrays:
-            encrypted_data = encrypt_array(array, key)
-            encrypted_arrays.append(encrypted_data)
-        encrypted_dict[k] = encrypted_arrays
-    return encrypted_dict
 
 
 
 
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-from Crypto.Random import get_random_bytes
-import base64
-import numpy as np
-import json
 
 def compare_dicts(dict1, dict2):
     differing_keys = []
@@ -328,20 +293,40 @@ def encrypt_array(array, key):
     }
 
 def decrypt_array(encrypted_data, key):
-    # Decode the components
-    ciphertext = base64.b64decode(encrypted_data['ciphertext'])
-    dtype = base64.b64decode(encrypted_data['dtype']).decode()
-    shape = json.loads(base64.b64decode(encrypted_data['shape']).decode())
-    iv = base64.b64decode(encrypted_data['iv'])
-    
-    # Decrypt
-    cipher = AES.new(key, AES.MODE_CBC, iv=iv)
-    decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
-    
-    # Convert back to numpy array
-    array = np.frombuffer(decrypted_data, dtype=dtype).reshape(shape)
-    
-    return array
+    # Assuming encrypted_data is a dictionary
+    if isinstance(encrypted_data, list):
+        # If it's a list, process each item in the list (assuming each item is a dictionary)
+        decrypted_arrays = []
+        for item in encrypted_data:
+            ciphertext = base64.b64decode(item['ciphertext'])
+            dtype = base64.b64decode(item['dtype']).decode()
+            shape = json.loads(base64.b64decode(item['shape']).decode())
+            iv = base64.b64decode(item['iv'])
+
+            # Decrypt
+            cipher = AES.new(key, AES.MODE_CBC, iv=iv)
+            decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
+
+            # Convert back to numpy array
+            array = np.frombuffer(decrypted_data, dtype=dtype).reshape(shape)
+            decrypted_arrays.append(array)
+        
+        return decrypted_arrays  # Return the list of decrypted arrays
+    else:
+        # If it's a single dictionary, proceed as before
+        ciphertext = base64.b64decode(encrypted_data['ciphertext'])
+        dtype = base64.b64decode(encrypted_data['dtype']).decode()
+        shape = json.loads(base64.b64decode(encrypted_data['shape']).decode())
+        iv = base64.b64decode(encrypted_data['iv'])
+
+        # Decrypt
+        cipher = AES.new(key, AES.MODE_CBC, iv=iv)
+        decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
+
+        # Convert back to numpy array
+        array = np.frombuffer(decrypted_data, dtype=dtype).reshape(shape)
+        
+        return array
 
 def encrypt_dict(data, key):
     encrypted_dict = {}
@@ -353,25 +338,30 @@ def encrypt_dict(data, key):
         encrypted_dict[k] = encrypted_arrays
     return encrypted_dict
 
-def decrypt_dict(encrypted_data_dict, key, array):
-    
+def decrypt_dict(encrypted_data_dict, key, indices_to_decrypt):
     decrypted_dict = {}
-    for k, encrypted_arrays in encrypted_data_dict.items():
-        decrypted_arrays = []
+    
+    keys = list(encrypted_data_dict.keys())
+        
+    for index in indices_to_decrypt:
+        # Check if the index is valid
+        if isinstance(index, int) and 0 <= index < len(keys):
+            key_at_index = keys[index]
+            # Call decrypt_array on the encrypted data corresponding to this key
+            decrypted_dict[key_at_index] = decrypt_array(encrypted_data_dict[key_at_index], key)
+        else:
+            return "Index out of range"
 
-        for encrypted_data in encrypted_arrays:
-            decrypted_array = decrypt_array(encrypted_data, key)
-            decrypted_arrays.append(decrypted_array)
-        decrypted_dict[k] = decrypted_arrays
     return decrypted_dict
-
 
 
 def replace_values(dict1, dict2):
 
-    for key in dict2:
-     
-      if key in dict1:
+    keys1 = list(dict2.keys())
+   
+    for key in keys1:
+        
+        
         dict1[key] = dict2[key]
     return dict1
 
@@ -383,6 +373,27 @@ def generate_secret_key(length):
         raise ValueError("Key length must be 16, 24, or 32 bytes (corresponding to AES-128, AES-192, or AES-256)")
 
     return secrets.token_bytes(length)
+import secrets
 
 
+def generate_secret_key_from_file(file_obj, length):
+    if length not in [16, 24, 32]:
+        raise ValueError("Key length must be 16, 24, or 32 bytes (corresponding to AES-128, AES-192, or AES-256).")
 
+    # Read the file content directly from the file-like object
+    file_content = file_obj.read().decode().strip()  # Read the content and decode it
+
+    # Check if it's hexadecimal or binary and convert it to bytes
+    if all(c in '01' for c in file_content):  # Binary
+        bit_data = int(file_content, 2)
+    elif all(c in '0123456789abcdefABCDEF' for c in file_content):  # Hexadecimal
+        bit_data = int(file_content, 16)
+    else:
+        raise ValueError("File content must be a valid binary or hexadecimal string.")
+
+    # Extract the first `length * 8` bits (matching the desired length in bytes)
+    total_bits = length * 8
+    extracted_bits = (bit_data >> max(0, bit_data.bit_length() - total_bits)) & ((1 << total_bits) - 1)
+    extracted_bytes = extracted_bits.to_bytes(length, byteorder='big')
+
+    return extracted_bytes

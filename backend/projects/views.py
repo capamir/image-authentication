@@ -17,14 +17,23 @@ logger = logging.getLogger(__name__)
 @transaction.atomic
 def uploadImage(request):
     try:
-        # Read the image file from the request
+        # Log incoming request
+        logger.debug(f"Request data: {request.data}")
+        logger.debug(f"Request files: {request.FILES}")
+
+        # Extract files and fields
         image_file = request.FILES.get('image')
+        uploaded_file = request.FILES.get('file')
         percentage = request.data.get('percentage')
 
+        # Validate inputs
         if not image_file:
             return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if percentage is None:
+        if not uploaded_file:
+            return Response({'error': 'Key file not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not percentage:
             return Response({'error': 'Percentage not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate percentage
@@ -33,10 +42,10 @@ def uploadImage(request):
         except ValueError:
             return Response({'error': 'Invalid percentage value'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Read image bytes and decode
+        # Decode image
         image_bytes = image_file.read()
         image_np = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)  # Ensure color image is read
+        image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
 
         if image is None:
             return Response({'error': 'Failed to decode image'}, status=status.HTTP_400_BAD_REQUEST)
@@ -65,7 +74,8 @@ def uploadImage(request):
         _, reconstructed_image_encoded = cv2.imencode('.png', reconstructed_image_normalized)
         reconstructed_image_base64 = base64.b64encode(reconstructed_image_encoded).decode('utf-8')
 
-        key = generate_secret_key(16)
+        key = generate_secret_key_from_file(uploaded_file,16)
+        
        
         columns_hashed = hash_dictionary_elements_sha256(columns_dict)
 
@@ -96,19 +106,18 @@ def uploadImage(request):
         encoded_key =base64.b64encode(key).decode('utf-8')
 
         # Prepare response with proper serialization of binary data
+  
         return Response({
             'message': 'Image uploaded successfully',
-            'block_index': block.index,  # Placeholder, adjust as necessary
-            'key':encoded_key,  # Placeholder, adjust as necessary
-            'percentage': percentage,
-            'compressed_image': reconstructed_image_base64  # Base64 encoded image string
+            'block_index': block.index,
+            'key': encoded_key,
+            'percentage': percentage_received,
+            'compressed_image': reconstructed_image_base64
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
         logger.error(f"Internal server error: {str(e)}", exc_info=True)
         return Response({'error': f'Internal server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 class ImageAddressViewSet(viewsets.ViewSet):
     def create(self, request):
@@ -117,9 +126,18 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
         image_file = request.FILES.get('image')
         image_key = request.data.get('key')
-        index = int(request.data.get('index'))
-        percentage = int(request.data.get('percentage'))
+        
+        index = int(request.data.get('address'))
+       
+        
+        percentage = int(request.data.get('dct'))
+        
+        
 
+
+        key = generate_secret_key_from_file(image_key,16)
+
+        print (key)
        
 
         
@@ -134,41 +152,35 @@ class ImageAddressViewSet(viewsets.ViewSet):
         block_size = 8
         columns_dict = block_dct_zigzag(gray_image, block_size, percentage)
 
-        
-
+    
         # hashing dct columns
         columns_hashed2 = hash_dictionary_elements_sha256(columns_dict)
 
         # import block
         block_index = index
+
         block = Block.objects.get(index=block_index)
         orginal_hash = eval(block.data)
         encrypted_data=eval(block.encrypted_data)
 
-
-       
 
         # compare images
         differences = compare_dicts(orginal_hash, columns_hashed2)
         print(differences)
     
         # If a key is provided, decrypt and reconstruct the image
-        if (image_key != None):
+        if (key != None):
             
-            decoded_key = base64.b64decode(image_key)
+           
             # decrypting dct columns
+            decrypted_columns = decrypt_dict(encrypted_data, key, differences)
+            decrypted_columns = {int(key): value for key, value in decrypted_columns.items()}
             
-            
-            decrypted_columns = decrypt_dict(encrypted_data, decoded_key, differences)
-            decrypted_columns={int(key): value for key, value in decrypted_columns.items()}
+            # print(decrypted_columns)
+
+
 
             
-
-         
-            # print((decrypted_columns))
-            # print("----------------------")
-            # print(type(encrypted_data))
-
             
             # restructure image
             recovered_columns = replace_values(columns_dict, decrypted_columns)
@@ -205,6 +217,8 @@ class ImageAddressViewSet(viewsets.ViewSet):
             # Encode highlighted image for JSON response
             _, highlighted_image_encoded = cv2.imencode('.png', highlighted_image_normalized)
             highlighted_image_base64 = base64.b64encode(highlighted_image_encoded).decode('utf-8')
+
+
 
             return Response({
             'original_image':reconstructed_base64,

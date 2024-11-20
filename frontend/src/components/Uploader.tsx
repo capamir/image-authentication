@@ -23,6 +23,7 @@ const Uploader = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [percentage, setPercentage] = useState<string>("");
   const [compressedImageUrl, setCompressedImageUrl] = useState<string>("");
+  const [keyFile, setKeyFile] = useState<FileType | null>(null);
   const toast = useToast();
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -38,6 +39,17 @@ const Uploader = () => {
     },
   });
 
+  const handleKeyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setKeyFile(
+        Object.assign(selectedFile, {
+          preview: URL.createObjectURL(selectedFile),
+        })
+      );
+    }
+  };
+
   const uploading = async () => {
     if (!file) {
       toast({
@@ -49,11 +61,23 @@ const Uploader = () => {
       });
       return;
     }
-
+  
+    if (!keyFile) {
+      toast({
+        title: "No key file selected",
+        description: "Please select a key file before submitting.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+  
     const formData = new FormData();
     formData.append("image", file as Blob);
     formData.append("percentage", percentage);
-
+    formData.append("file", keyFile); // Use 'file' to match the backend
+  
     setIsUploading(true);
     try {
       const config = {
@@ -61,22 +85,20 @@ const Uploader = () => {
           "Content-Type": "multipart/form-data",
         },
       };
-
+  
       const { data } = await axios.post(
         "http://127.0.0.1:8000/api/products/upload/",
         formData,
         config
       );
-
+  
       if (data) {
-        // Correctly format the Base64 string for the image source
         setCompressedImageUrl(`data:image/png;base64,${data.compressed_image}`);
         toast({
-          title: "Upload successful ",
+          title: "Upload successful",
           description: (
             <Box>
               <Text>Percentage: {data.percentage}</Text>
-              <Text>Image Key: {data.key}</Text>
               <Text>Block Index: {data.block_index}</Text>
             </Box>
           ),
@@ -98,11 +120,12 @@ const Uploader = () => {
       setIsUploading(false);
     }
   };
-
+  
   const resetFiles = () => {
     setFile(undefined);
     setCompressedImageUrl("");
     setIsUploading(false);
+    setKeyFile(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -149,6 +172,7 @@ const Uploader = () => {
               </Text>
             )}
           </FormControl>
+
           <FormControl marginY={5}>
             <FormLabel>
               Adjust the DCT coefficient retention percentage:{" "}
@@ -158,6 +182,11 @@ const Uploader = () => {
               value={percentage}
               onChange={(e) => setPercentage(e.target.value)}
             />
+          </FormControl>
+
+          <FormControl marginY={5}>
+              <FormLabel>Upload your key file</FormLabel>
+              <Input type="file" onChange={handleKeyFileChange} padding={2} />
           </FormControl>
 
           <Button

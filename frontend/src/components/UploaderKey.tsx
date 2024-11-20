@@ -11,10 +11,10 @@ import {
   Image,
   Input,
   Spinner,
-  Text,
-  useDisclosure,
   useToast,
   Spacer,
+  Text,
+  useDisclosure,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useCallback, useState } from "react";
@@ -29,7 +29,7 @@ const UploaderKey = () => {
   const [file, setFile] = useState<FileType>();
   const [address, setAddress] = useState("");
   const [dct, setDct] = useState("");
-  const [key, setKey] = useState("");
+  const [keyFile, setKeyFile] = useState<FileType | null>(null);
   const [compressedImageUrl, setCompressedImageUrl] = useState<string>("");
   const [originalImageUrl, setOriginalImageUrl] = useState<string>(""); // Added state for original image URL
   const [isUploading, setIsUploading] = useState(false);
@@ -54,12 +54,27 @@ const UploaderKey = () => {
     onDrop,
   });
 
+  const handleKeyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setKeyFile(
+        Object.assign(selectedFile, {
+          preview: URL.createObjectURL(selectedFile),
+        })
+      );
+    }
+  };
+
   const uploading = async () => {
+    if (!file) return;
+
     const formData = new FormData();
     formData.append("image", file);
-    formData.append("index", address);
-    formData.append("percentage", dct);
-    if (key) formData.append("key", key);
+    formData.append("address", address);
+    formData.append("dct", dct);
+    
+
+    if (keyFile) formData.append("key", keyFile);
 
     setIsUploading(true);
     try {
@@ -73,9 +88,11 @@ const UploaderKey = () => {
         formData,
         config
       );
+      console.log(data);
 
+      
       if (data) {
-        if (key) {
+        if (keyFile) {
           setCompressedImageUrl(`data:image/png;base64,${data.compressed_image}`);
           setOriginalImageUrl(`data:image/png;base64,${data.original_image}`); // Set original image URL
           toast({
@@ -104,31 +121,25 @@ const UploaderKey = () => {
         }
       }
     } catch (error) {
-      console.error("Error uploading image:", error.response?.data?.error || error.message);
-      toast({
-        title: "Upload failed",
-        description: error.response?.data?.error || "There was an error uploading your image.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      console.log(error.message);
     } finally {
       setIsUploading(false);
     }
   };
 
   const resetFiles = () => {
+    setFile({} as FileType);
+    setKeyFile(null);
+    setIsUploading(false);
     setFile(undefined);
     setCompressedImageUrl("");
-    setOriginalImageUrl(""); // Reset original image URL
-    setIsUploading(false);
+    setOriginalImageUrl("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     uploading();
   };
-
 
   return (
     <Card
@@ -145,11 +156,11 @@ const UploaderKey = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          Verification Image
+          verification image
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl marginY={5}>
-            <FormLabel>Enter block index:</FormLabel>
+            <FormLabel> Enter block address:</FormLabel>
             <Input
               type="text"
               value={address}
@@ -192,21 +203,14 @@ const UploaderKey = () => {
           </FormControl>
 
           <div>
-            <label>
-              <input type="checkbox" checked={isOpen} onChange={onToggle} />
-              <Text> Do you want image to be restored?</Text>
-            </label>
+       
           </div>
-          <Collapse in={isOpen} animateOpacity>
+          <div >
             <FormControl marginY={5}>
-              <FormLabel>Enter your key</FormLabel>
-              <Input
-                type="text"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-              />
+              <FormLabel>Upload your key file</FormLabel>
+              <Input type="file" onChange={handleKeyFileChange} padding={2} />
             </FormControl>
-          </Collapse>
+          </div>
 
           <Button
             type="submit"
@@ -244,7 +248,7 @@ const UploaderKey = () => {
         <Flex gap={3} direction={{ base: "column", md: "row" }}>
           <Box>
             <Heading as="h3" fontSize="25px" marginTop={3}>
-              Your image
+              Accepted Files
             </Heading>
             {isUploading && <Spinner />}
             {file && (
@@ -255,9 +259,9 @@ const UploaderKey = () => {
               </Card>
             )}
           </Box>
-          <Spacer />
-          <Box>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
+
+          <Box marginLeft={150}>
+            <Heading as="h3" fontSize="25px"  marginTop={3}>
                 The differences
             </Heading>
             {compressedImageUrl && (
@@ -299,6 +303,8 @@ const UploaderKey = () => {
         </Flex>
       </CardBody>
     </Card>
+
+    
   );
 };
 
