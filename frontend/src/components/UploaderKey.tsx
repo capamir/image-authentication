@@ -13,6 +13,8 @@ import {
   Spinner,
   Text,
   useDisclosure,
+  useToast,
+  Spacer,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useCallback, useState } from "react";
@@ -28,9 +30,12 @@ const UploaderKey = () => {
   const [address, setAddress] = useState("");
   const [dct, setDct] = useState("");
   const [key, setKey] = useState("");
-
+  const [compressedImageUrl, setCompressedImageUrl] = useState<string>("");
+  const [originalImageUrl, setOriginalImageUrl] = useState<string>(""); // Added state for original image URL
   const [isUploading, setIsUploading] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
+  const toast = useToast();
+  const [orginalimage, setOrginalimage] = useState<string>("");
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles?.length) {
@@ -52,8 +57,8 @@ const UploaderKey = () => {
   const uploading = async () => {
     const formData = new FormData();
     formData.append("image", file);
-    formData.append("address", address);
-    formData.append("dct", dct);
+    formData.append("index", address);
+    formData.append("percentage", dct);
     if (key) formData.append("key", key);
 
     setIsUploading(true);
@@ -68,23 +73,62 @@ const UploaderKey = () => {
         formData,
         config
       );
-      console.log(data);
+
+      if (data) {
+        if (key) {
+          setCompressedImageUrl(`data:image/png;base64,${data.compressed_image}`);
+          setOriginalImageUrl(`data:image/png;base64,${data.original_image}`); // Set original image URL
+          toast({
+            title: "Upload successful ",
+            description: (
+              <Box>
+                <Text>{data.message}</Text>
+              </Box>
+            ),
+            status: "success",
+            duration: 5000,
+            isClosable: true,
+          });
+        } else {
+          toast({
+            title: "Upload successful ",
+            description: (
+              <Box>
+                <Text>{data.message}</Text>
+              </Box>
+            ),
+            status: "success",
+            duration: 5000,
+            isClosable: true,
+          });
+        }
+      }
     } catch (error) {
-      console.log(error.message);
+      console.error("Error uploading image:", error.response?.data?.error || error.message);
+      toast({
+        title: "Upload failed",
+        description: error.response?.data?.error || "There was an error uploading your image.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsUploading(false);
     }
   };
 
   const resetFiles = () => {
-    setFile({} as FileType);
+    setFile(undefined);
+    setCompressedImageUrl("");
+    setOriginalImageUrl(""); // Reset original image URL
     setIsUploading(false);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     uploading();
   };
+
 
   return (
     <Card
@@ -101,11 +145,11 @@ const UploaderKey = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          verification image
+          Verification Image
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl marginY={5}>
-            <FormLabel> Enter block address:</FormLabel>
+            <FormLabel>Enter block index:</FormLabel>
             <Input
               type="text"
               value={address}
@@ -200,13 +244,54 @@ const UploaderKey = () => {
         <Flex gap={3} direction={{ base: "column", md: "row" }}>
           <Box>
             <Heading as="h3" fontSize="25px" marginTop={3}>
-              Accepted Files
+              Your image
             </Heading>
             {isUploading && <Spinner />}
             {file && (
               <Card width="300px" marginY={4}>
                 <CardBody>
                   <Image src={file.preview} alt={file.name} />
+                </CardBody>
+              </Card>
+            )}
+          </Box>
+          <Spacer />
+          <Box>
+            <Heading as="h3" fontSize="25px" marginTop={3}>
+                The differences
+            </Heading>
+            {compressedImageUrl && (
+              <Card width="300px" marginY={4}>
+                <CardBody>
+                  <Image src={compressedImageUrl} alt="compressedImage" />
+                </CardBody>
+              </Card>
+            )}
+          </Box>
+          <Spacer />
+          <Box>
+            <Heading as="h3" fontSize="25px" marginTop={3}>
+              Original Image
+            </Heading>
+            {originalImageUrl && (
+              <Card width="300px" marginY={4}>
+                <CardBody>
+                  <Image src={originalImageUrl} alt="originalImage" />
+                  <Button
+                    as="a"
+                    href={originalImageUrl}
+                    download="original_image.png"
+                    marginTop={2}
+                    color="#fff"
+                    background="#FF4820"
+                    fontSize="18px"
+                    lineHeight="25px"
+                    border="none"
+                    cursor="pointer"
+                    borderRadius="md"
+                  >
+                    Download Original Image
+                  </Button>
                 </CardBody>
               </Card>
             )}

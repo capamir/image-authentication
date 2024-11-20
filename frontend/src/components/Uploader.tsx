@@ -125,7 +125,7 @@ const Uploader = () => {
           backgroundClip="text"
           marginBottom="2rem"
         >
-          upload image
+          image authentication 
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl
@@ -208,22 +208,22 @@ const Uploader = () => {
             )}
           </Box>
           <Spacer />
-          <Box>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
-              compressed image
-            </Heading>
-            {compressedImageUrl && (
-              <Card width="300px" marginY={4}>
-                <CardBody>
-                  <Image src={compressedImageUrl} alt="compressedImage" />
-                </CardBody>
-              </Card>
-            )}
-          </Box>
-        </Flex>
-      </CardBody>
-    </Card>
-  );
-};
+            <Box>
+              <Heading as="h3" fontSize="25px" marginTop={3}>
+                 your image
+              </Heading>
+              {compressedImageUrl && (
+                <Card width="300px" marginY={4}>
+                  <CardBody>
+                    <Image src={compressedImageUrl} alt="compressedImage" />
+                  </CardBody>
+                </Card>
+              )}
+            </Box>
+          </Flex>
+        </CardBody>
+      </Card>
+    );
+  };
 
 export default Uploader;

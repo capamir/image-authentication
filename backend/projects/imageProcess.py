@@ -123,9 +123,9 @@ def block_dct_zigzag(image, block_size, zigzag_percentage):
             zigzag_block = np.abs(zigzag_block) 
             columns_dict[j].append(zigzag_block)
 
-        
-    
     return columns_dict
+
+
 
 def inverse_zigzag(input_1d, shape):
     vmax, hmax = shape
@@ -247,48 +247,50 @@ def hash_dictionary_elements_sha256(input_dict):
     return hashed_dict
 
 
-def encrypt_dictionary(dictionary, key):
-    encrypted_dict = {}
 
-    for k, v in dictionary.items():
-        iv = os.urandom(16)  # Initialization vector
-        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-        encryptor = cipher.encryptor()
-        
-        padder = padding.PKCS7(128).padder()
-        data = str(v).encode('utf-8')  # Convert to bytes
-        padded_data = padder.update(data) + padder.finalize()
-        encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
-        
-        # Store the encrypted data and IV
-        encrypted_dict[k] = (iv, encrypted_data)
+def encrypt_array(array, key):
+    # Convert the array to bytes
+    byte_data = array.tobytes()
     
+    # AES encryption
+    cipher = AES.new(key, AES.MODE_CBC)
+    ciphertext = cipher.encrypt(pad(byte_data, AES.block_size))
+    
+    # Encode the ciphertext to base64 for sending
+    ciphertext_encoded = base64.b64encode(ciphertext).decode('utf-8')
+    
+    return ciphertext_encoded
+
+def decrypt_array(encrypted_data, key):
+    # Decode the base64 encoded encrypted data
+    ciphertext = base64.b64decode(encrypted_data)
+    
+    # AES decryption
+    cipher = AES.new(key, AES.MODE_CBC)
+    decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
+    
+    # Convert bytes back to numpy array
+    return np.frombuffer(decrypted_data, dtype=np.float32)
+
+def encrypt_dict(data, key):
+    encrypted_dict = {}
+    for k, arrays in data.items():
+        encrypted_arrays = []
+        for array in arrays:
+            encrypted_data = encrypt_array(array, key)
+            encrypted_arrays.append(encrypted_data)
+        encrypted_dict[k] = encrypted_arrays
     return encrypted_dict
 
 
-def decrypt_dictionary(encrypted_dict, key, indices):
-    decrypted_dict = {}
-    
-    if indices is not None:
-        # Convert indices to a set for faster lookup
-        indices_set = set(indices)
-    else:
-        # If no indices are provided, decrypt all elements
-        indices_set = set(range(len(encrypted_dict)))
-    
-    for i, (k, (iv, encrypted_data)) in enumerate(encrypted_dict.items()):
-        if i in indices_set:
-            cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-            decryptor = cipher.decryptor()
-            
-            decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
-            
-            unpadder = padding.PKCS7(128).unpadder()
-            unpadded_data = unpadder.update(decrypted_data) + unpadder.finalize()
-            
-            decrypted_dict[k] = unpadded_data.decode('utf-8')
-    
-    return decrypted_dict
+
+
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Random import get_random_bytes
+import base64
+import numpy as np
+import json
 
 def compare_dicts(dict1, dict2):
     differing_keys = []
@@ -296,20 +298,84 @@ def compare_dicts(dict1, dict2):
         if key in dict2:
             if str(dict2[key]) != str(dict1[key]) :
                 differing_keys.append(key)
-
-
-    for key in dict2:
-        if key not in dict1:
-            if str(dict2[key]) != str(dict1[key]) :
-                differing_keys.append(key)
-    
     return differing_keys
 
+def encrypt_array(array, key):
+    # Convert the array to bytes
+    byte_data = array.tobytes()
+    
+    # Include dtype and shape information
+    dtype = str(array.dtype)
+    shape = array.shape
+    
+    # Encrypt
+    cipher = AES.new(key, AES.MODE_CBC)
+    ciphertext = cipher.encrypt(pad(byte_data, AES.block_size))
+    
+    # Encode for transport
+    ciphertext_encoded = base64.b64encode(ciphertext).decode('utf-8')
+    
+    # Encode dtype and shape for transport
+    dtype_encoded = base64.b64encode(dtype.encode()).decode('utf-8')
+    shape_encoded = base64.b64encode(json.dumps(shape).encode()).decode('utf-8')
+    iv_encoded = base64.b64encode(cipher.iv).decode('utf-8')  # Include IV
+    
+    return {
+        'ciphertext': ciphertext_encoded,
+        'dtype': dtype_encoded,
+        'shape': shape_encoded,
+        'iv': iv_encoded
+    }
+
+def decrypt_array(encrypted_data, key):
+    # Decode the components
+    ciphertext = base64.b64decode(encrypted_data['ciphertext'])
+    dtype = base64.b64decode(encrypted_data['dtype']).decode()
+    shape = json.loads(base64.b64decode(encrypted_data['shape']).decode())
+    iv = base64.b64decode(encrypted_data['iv'])
+    
+    # Decrypt
+    cipher = AES.new(key, AES.MODE_CBC, iv=iv)
+    decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
+    
+    # Convert back to numpy array
+    array = np.frombuffer(decrypted_data, dtype=dtype).reshape(shape)
+    
+    return array
+
+def encrypt_dict(data, key):
+    encrypted_dict = {}
+    for k, arrays in data.items():
+        encrypted_arrays = []
+        for array in arrays:
+            encrypted_data = encrypt_array(array, key)
+            encrypted_arrays.append(encrypted_data)
+        encrypted_dict[k] = encrypted_arrays
+    return encrypted_dict
+
+def decrypt_dict(encrypted_data_dict, key, array):
+    
+    decrypted_dict = {}
+    for k, encrypted_arrays in encrypted_data_dict.items():
+        decrypted_arrays = []
+
+        for encrypted_data in encrypted_arrays:
+            decrypted_array = decrypt_array(encrypted_data, key)
+            decrypted_arrays.append(decrypted_array)
+        decrypted_dict[k] = decrypted_arrays
+    return decrypted_dict
+
+
+
 def replace_values(dict1, dict2):
+
     for key in dict2:
-        if key in dict1:
-            dict1[key] = dict2[key]
+     
+      if key in dict1:
+        dict1[key] = dict2[key]
     return dict1
+
+
 
 def generate_secret_key(length):
 
