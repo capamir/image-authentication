@@ -49,7 +49,7 @@ const Header = () => {
       </Box>
       
       <Box flex="1" marginLeft='30%'>
-        <Image  src={ai} alt="ai" width="400px"  height='300px' margin-left='200px' />
+        <Image  src={ai} alt="ai" width="400px"  height='300px'  />
       </Box>
     </Flex>
   );

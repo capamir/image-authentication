@@ -262,7 +262,7 @@ const UploaderKey = () => {
 
           <Box marginLeft={150}>
             <Heading as="h3" fontSize="25px"  marginTop={3}>
-                The differences
+                Manipulated columns
             </Heading>
             {compressedImageUrl && (
               <Card width="300px" marginY={4}>
@@ -275,27 +275,13 @@ const UploaderKey = () => {
           <Spacer />
           <Box>
             <Heading as="h3" fontSize="25px" marginTop={3}>
-              Original Image
+              Restored Image
             </Heading>
             {originalImageUrl && (
               <Card width="300px" marginY={4}>
                 <CardBody>
                   <Image src={originalImageUrl} alt="originalImage" />
-                  <Button
-                    as="a"
-                    href={originalImageUrl}
-                    download="original_image.png"
-                    marginTop={2}
-                    color="#fff"
-                    background="#FF4820"
-                    fontSize="18px"
-                    lineHeight="25px"
-                    border="none"
-                    cursor="pointer"
-                    borderRadius="md"
-                  >
-                    Download Original Image
-                  </Button>
+
                 </CardBody>
               </Card>
             )}

@@ -198,26 +198,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
             reconstructed_base64 = base64.b64encode(reconstructed_image_encoded).decode('utf-8')
 
 
-            # Highlight differences
-            highlighted_image = reconstructed_image.copy()
-            for key in differences:
-                column = int(key)
-                # Assume block_size is 8x8 and column index starts from 0
-                start_x = column * block_size
-                end_x = start_x + block_size
-                # Draw a red rectangle around the column
-                cv2.rectangle(highlighted_image, (start_x, 0), (end_x, highlighted_image.shape[0]), (0, 0, 255), 2)
-
-            logger.debug(f"Reconstructed Image Shape: {reconstructed_image.shape}")
-            
-            # Normalize the highlighted image to ensure the brightness is retained
-            highlighted_image_normalized = cv2.normalize(highlighted_image, None, 0, 255, cv2.NORM_MINMAX)
-            highlighted_image_normalized = highlighted_image_normalized.astype(np.uint8)
-
-            # Encode highlighted image for JSON response
-            _, highlighted_image_encoded = cv2.imencode('.png', highlighted_image_normalized)
-            highlighted_image_base64 = base64.b64encode(highlighted_image_encoded).decode('utf-8')
-
+            highlighted_image_base64= blur_other_columns(reconstructed_image, differences, block_size)
 
 
             return Response({

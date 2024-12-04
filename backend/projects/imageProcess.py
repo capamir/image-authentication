@@ -367,14 +367,30 @@ def replace_values(dict1, dict2):
 
 
 
-def generate_secret_key(length):
 
-    if length not in [16, 24, 32]:
-        raise ValueError("Key length must be 16, 24, or 32 bytes (corresponding to AES-128, AES-192, or AES-256)")
+def blur_other_columns(image, differences, block_size):
 
-    return secrets.token_bytes(length)
-import secrets
+    # Create a blurred version of the original image
+    blurred_image = cv2.GaussianBlur(image, (31, 31),10)
+    
+    # Create a mask to retain the specified differing columns
+    mask = np.zeros_like(image, dtype=np.uint8)
+    for column in differences:
+        start_x = column * block_size
+        end_x = start_x + block_size
+        mask[:, start_x:end_x] = 1  # Mark the differing columns
 
+    # Combine the original image and blurred image using the mask
+    highlighted_image = np.where(mask, image, blurred_image)
+    
+    # Normalize the highlighted image to retain brightness
+    highlighted_image_normalized = cv2.normalize(highlighted_image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    
+    # Encode the image for JSON response
+    _, highlighted_image_encoded = cv2.imencode('.png', highlighted_image_normalized)
+    highlighted_image_base64 = base64.b64encode(highlighted_image_encoded).decode('utf-8')
+    
+    return highlighted_image_base64
 
 def generate_secret_key_from_file(file_obj, length):
     if length not in [16, 24, 32]:
