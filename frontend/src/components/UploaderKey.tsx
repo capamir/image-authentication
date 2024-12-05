@@ -147,9 +147,9 @@ const UploaderKey = () => {
   return (
     <Card
       className="upload__bg"
-      width="90%"
+      width={{ base: "95%", md: "90%", lg: "80%" }}
       marginX="auto"
-      padding="2rem"
+      padding={{ base: "1.5rem", md: "2rem", lg: "2rem" }}
       marginY={5}
     >
       <CardBody>
@@ -158,27 +158,30 @@ const UploaderKey = () => {
           background={gradient}
           backgroundClip="text"
           marginBottom="2rem"
+          textAlign="center"
         >
-          verification image
+          Verification Image
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl marginY={5}>
-            <FormLabel> Enter block address:</FormLabel>
+            <FormLabel>Enter Block Address:</FormLabel>
             <Input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter blockchain address"
             />
           </FormControl>
 
           <FormControl marginY={5}>
             <FormLabel>
-              Enter the DCT coefficient retention percentage:
+              Enter the DCT Coefficient Retention Percentage:
             </FormLabel>
             <Input
               type="text"
               value={dct}
               onChange={(e) => setDct(e.target.value)}
+              placeholder="e.g., 85"
             />
           </FormControl>
 
@@ -197,63 +200,76 @@ const UploaderKey = () => {
           >
             <input {...getInputProps()} />
             {isDragActive ? (
-              <Text fontSize="22px">Drop the image here ...</Text>
+              <Text fontSize="18px">Drop the image here...</Text>
             ) : (
-              <Text fontSize="22px">
-                Drag 'n' drop an image here, or click to select from files
+              <Text fontSize="18px">
+                Drag 'n' drop an image here, or click to select a file
               </Text>
             )}
           </FormControl>
 
-          <div></div>
-          <div>
-            <FormControl marginY={5}>
-              <FormLabel>Upload your key file</FormLabel>
-              <Input type="file" onChange={handleKeyFileChange} padding={2} />
-            </FormControl>
-          </div>
+          <FormControl marginY={5}>
+            <FormLabel>Upload Your Key File:</FormLabel>
+            <Input
+              type="file"
+              onChange={handleKeyFileChange}
+              padding={2}
+              accept=".key, .txt"
+            />
+          </FormControl>
 
-          <Button
-            type="submit"
-            paddingY="0.5rem"
-            paddingX="1rem"
-            marginTop={2}
-            color="#fff"
-            background="#FF4820"
-            fontSize="18px"
-            lineHeight="25px"
-            border="none"
-            cursor="pointer"
-            borderRadius="md"
-          >
-            Submit
-          </Button>
+          <Flex justifyContent={{ base: "center", md: "flex-start" }} gap={4}>
+            <Button
+              type="submit"
+              paddingY="0.5rem"
+              paddingX="1rem"
+              marginTop={2}
+              color="#fff"
+              background="#FF4820"
+              fontSize={{ base: "16px", md: "18px" }}
+              lineHeight="25px"
+              border="none"
+              cursor="pointer"
+              borderRadius="md"
+            >
+              Submit
+            </Button>
 
-          <Button
-            paddingY="0.5rem"
-            paddingX="1rem"
-            marginTop={2}
-            marginX={3}
-            color="#fff"
-            background="#FF4820"
-            fontSize="18px"
-            lineHeight="25px"
-            border="none"
-            cursor="pointer"
-            borderRadius="md"
-            onClick={resetFiles}
-          >
-            Reset
-          </Button>
+            <Button
+              paddingY="0.5rem"
+              paddingX="1rem"
+              marginTop={2}
+              color="#fff"
+              background="#FF4820"
+              fontSize={{ base: "16px", md: "18px" }}
+              lineHeight="25px"
+              border="none"
+              cursor="pointer"
+              borderRadius="md"
+              onClick={resetFiles}
+            >
+              Reset
+            </Button>
+          </Flex>
         </form>
-        <Flex gap={3} direction={{ base: "column", md: "row" }}>
-          <Box>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
+
+        <Flex
+          gap={4}
+          direction={{ base: "column", md: "row" }}
+          marginTop="2rem"
+          alignItems="flex-start"
+        >
+          <Box flex="1">
+            <Heading
+              as="h3"
+              fontSize={{ base: "20px", md: "22px", lg: "25px" }}
+              marginBottom={3}
+            >
               Accepted Files
             </Heading>
             {isUploading && <Spinner />}
             {file && (
-              <Card width="300px" marginY={4}>
+              <Card marginBottom={4}>
                 <CardBody>
                   <Image src={file.preview} alt={file.name} />
                 </CardBody>
@@ -261,27 +277,35 @@ const UploaderKey = () => {
             )}
           </Box>
 
-          <Box marginLeft={150}>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
-              Manipulated columns
+          <Box flex="1">
+            <Heading
+              as="h3"
+              fontSize={{ base: "20px", md: "22px", lg: "25px" }}
+              marginBottom={3}
+            >
+              Manipulated Columns
             </Heading>
             {compressedImageUrl && (
-              <Card width="300px" marginY={4}>
+              <Card marginBottom={4}>
                 <CardBody>
-                  <Image src={compressedImageUrl} alt="compressedImage" />
+                  <Image src={compressedImageUrl} alt="Compressed Image" />
                 </CardBody>
               </Card>
             )}
           </Box>
-          <Spacer />
-          <Box>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
+
+          <Box flex="1">
+            <Heading
+              as="h3"
+              fontSize={{ base: "20px", md: "22px", lg: "25px" }}
+              marginBottom={3}
+            >
               Restored Image
             </Heading>
             {originalImageUrl && (
-              <Card width="300px" marginY={4}>
+              <Card marginBottom={4}>
                 <CardBody>
-                  <Image src={originalImageUrl} alt="originalImage" />
+                  <Image src={originalImageUrl} alt="Restored Image" />
                 </CardBody>
               </Card>
             )}
