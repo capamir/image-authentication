@@ -3,18 +3,18 @@ import {
   Button,
   Card,
   CardBody,
-  Collapse,
   Flex,
   FormControl,
   FormLabel,
   Heading,
   Image,
   Input,
-  Spinner,
-  useToast,
   Spacer,
+  Spinner,
   Text,
-  useDisclosure,
+  useColorModeValue,
+  useTheme,
+  useToast,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useCallback, useState } from "react";
@@ -26,6 +26,11 @@ interface FileType {
 }
 
 const UploaderKey = () => {
+  const theme = useTheme();
+  const gradient = useColorModeValue(
+    theme.colors.gradient.light, // Light mode gradient
+    theme.colors.gradient.dark // Dark mode gradient
+  );
   const [file, setFile] = useState<FileType>();
   const [address, setAddress] = useState("");
   const [dct, setDct] = useState("");
@@ -33,9 +38,7 @@ const UploaderKey = () => {
   const [compressedImageUrl, setCompressedImageUrl] = useState<string>("");
   const [originalImageUrl, setOriginalImageUrl] = useState<string>(""); // Added state for original image URL
   const [isUploading, setIsUploading] = useState(false);
-  const { isOpen, onToggle } = useDisclosure();
   const toast = useToast();
-  const [orginalimage, setOrginalimage] = useState<string>("");
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles?.length) {
@@ -72,7 +75,6 @@ const UploaderKey = () => {
     formData.append("image", file);
     formData.append("address", address);
     formData.append("dct", dct);
-    
 
     if (keyFile) formData.append("key", keyFile);
 
@@ -90,10 +92,11 @@ const UploaderKey = () => {
       );
       console.log(data);
 
-      
       if (data) {
         if (keyFile) {
-          setCompressedImageUrl(`data:image/png;base64,${data.compressed_image}`);
+          setCompressedImageUrl(
+            `data:image/png;base64,${data.compressed_image}`
+          );
           setOriginalImageUrl(`data:image/png;base64,${data.original_image}`); // Set original image URL
           toast({
             title: "Upload successful ",
@@ -152,7 +155,7 @@ const UploaderKey = () => {
       <CardBody>
         <Heading
           as="h2"
-          background="gradient"
+          background={gradient}
           backgroundClip="text"
           marginBottom="2rem"
         >
@@ -202,10 +205,8 @@ const UploaderKey = () => {
             )}
           </FormControl>
 
+          <div></div>
           <div>
-       
-          </div>
-          <div >
             <FormControl marginY={5}>
               <FormLabel>Upload your key file</FormLabel>
               <Input type="file" onChange={handleKeyFileChange} padding={2} />
@@ -261,8 +262,8 @@ const UploaderKey = () => {
           </Box>
 
           <Box marginLeft={150}>
-            <Heading as="h3" fontSize="25px"  marginTop={3}>
-                Manipulated columns
+            <Heading as="h3" fontSize="25px" marginTop={3}>
+              Manipulated columns
             </Heading>
             {compressedImageUrl && (
               <Card width="300px" marginY={4}>
@@ -281,7 +282,6 @@ const UploaderKey = () => {
               <Card width="300px" marginY={4}>
                 <CardBody>
                   <Image src={originalImageUrl} alt="originalImage" />
-
                 </CardBody>
               </Card>
             )}
@@ -289,8 +289,6 @@ const UploaderKey = () => {
         </Flex>
       </CardBody>
     </Card>
-
-    
   );
 };
 

@@ -8,17 +8,23 @@ import {
   FormControl,
   Heading,
   Image,
-  Spacer,
   Spinner,
   Text,
   FormLabel,
   Input,
   useToast,
+  useColorModeValue,
+  useTheme,
 } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 
 const Uploader = () => {
+  const theme = useTheme();
+  const gradient = useColorModeValue(
+    theme.colors.gradient.light, // Light mode gradient
+    theme.colors.gradient.dark // Dark mode gradient
+  );
   const [file, setFile] = useState<File | undefined>(undefined);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [percentage, setPercentage] = useState<string>("");
@@ -61,7 +67,7 @@ const Uploader = () => {
       });
       return;
     }
-  
+
     if (!keyFile) {
       toast({
         title: "No key file selected",
@@ -72,12 +78,12 @@ const Uploader = () => {
       });
       return;
     }
-  
+
     const formData = new FormData();
     formData.append("image", file as Blob);
     formData.append("percentage", percentage);
     formData.append("file", keyFile); // Use 'file' to match the backend
-  
+
     setIsUploading(true);
     try {
       const config = {
@@ -85,13 +91,13 @@ const Uploader = () => {
           "Content-Type": "multipart/form-data",
         },
       };
-  
+
       const { data } = await axios.post(
         "http://127.0.0.1:8000/api/products/upload/",
         formData,
         config
       );
-  
+
       if (data) {
         setCompressedImageUrl(`data:image/png;base64,${data.compressed_image}`);
         toast({
@@ -108,10 +114,15 @@ const Uploader = () => {
         });
       }
     } catch (error) {
-      console.error("Error uploading image:", error.response?.data?.error || error.message);
+      console.error(
+        "Error uploading image:",
+        error.response?.data?.error || error.message
+      );
       toast({
         title: "Upload failed",
-        description: error.response?.data?.error || "There was an error uploading your image.",
+        description:
+          error.response?.data?.error ||
+          "There was an error uploading your image.",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -120,7 +131,7 @@ const Uploader = () => {
       setIsUploading(false);
     }
   };
-  
+
   const resetFiles = () => {
     setFile(undefined);
     setCompressedImageUrl("");
@@ -136,21 +147,27 @@ const Uploader = () => {
   return (
     <Card
       className="upload__bg"
-      width="90%"
+      width={{ base: "95%", md: "90%", lg: "80%" }}
       marginX="auto"
-      padding="2rem"
+      padding={{ base: "1.5rem", md: "2rem" }}
       marginY={5}
     >
       <CardBody>
+        {/* Heading */}
         <Heading
+          background={gradient}
           as="h2"
-          background="gradient"
           backgroundClip="text"
           marginBottom="2rem"
+          fontSize={{ base: "24px", md: "28px", lg: "32px" }}
+          textAlign="center"
         >
-          image authentication 
+          Image Authentication
         </Heading>
+
+        {/* Form */}
         <form onSubmit={handleSubmit}>
+          {/* Drag-and-Drop Box */}
           <FormControl
             marginX="auto"
             p={4}
@@ -165,17 +182,20 @@ const Uploader = () => {
           >
             <input {...getInputProps()} />
             {isDragActive ? (
-              <Text fontSize="22px">Drop the image here ...</Text>
+              <Text fontSize={{ base: "18px", md: "20px", lg: "22px" }}>
+                Drop the image here ...
+              </Text>
             ) : (
-              <Text fontSize="22px">
+              <Text fontSize={{ base: "18px", md: "20px", lg: "22px" }}>
                 Drag 'n' drop an image here, or click to select from files
               </Text>
             )}
           </FormControl>
 
+          {/* Input for Percentage */}
           <FormControl marginY={5}>
-            <FormLabel>
-              Adjust the DCT coefficient retention percentage:{" "}
+            <FormLabel fontSize={{ base: "14px", md: "16px" }}>
+              Adjust the DCT coefficient retention percentage:
             </FormLabel>
             <Input
               type="text"
@@ -184,75 +204,106 @@ const Uploader = () => {
             />
           </FormControl>
 
+          {/* Key File Upload */}
           <FormControl marginY={5}>
-              <FormLabel>Upload your key file</FormLabel>
-              <Input type="file" onChange={handleKeyFileChange} padding={2} />
+            <FormLabel fontSize={{ base: "14px", md: "16px" }}>
+              Upload your key file:
+            </FormLabel>
+            <Input type="file" onChange={handleKeyFileChange} padding={2} />
           </FormControl>
 
-          <Button
-            type="submit"
-            paddingY="0.5rem"
-            paddingX="1rem"
-            marginTop={2}
-            color="#fff"
-            background="#FF4820"
-            fontSize="18px"
-            lineHeight="25px"
-            border="none"
-            cursor="pointer"
-            borderRadius="md"
-          >
-            Submit
-          </Button>
-
-          <Button
-            paddingY="0.5rem"
-            paddingX="1rem"
-            marginTop={2}
-            marginX={3}
-            color="#fff"
-            background="#FF4820"
-            fontSize="18px"
-            lineHeight="25px"
-            border="none"
-            cursor="pointer"
-            borderRadius="md"
-            onClick={resetFiles}
-          >
-            Reset
-          </Button>
+          {/* Submit and Reset Buttons */}
+          <Flex direction={{ base: "column", sm: "row" }} gap={3} marginTop={2}>
+            <Button
+              type="submit"
+              paddingY="0.5rem"
+              paddingX="1rem"
+              color="#fff"
+              background="#FF4820"
+              fontSize="18px"
+              lineHeight="25px"
+              border="none"
+              cursor="pointer"
+              borderRadius="md"
+              width={{ base: "100%", sm: "auto" }}
+            >
+              Submit
+            </Button>
+            <Button
+              paddingY="0.5rem"
+              paddingX="1rem"
+              color="#fff"
+              background="#FF4820"
+              fontSize="18px"
+              lineHeight="25px"
+              border="none"
+              cursor="pointer"
+              borderRadius="md"
+              onClick={resetFiles}
+              width={{ base: "100%", sm: "auto" }}
+            >
+              Reset
+            </Button>
+          </Flex>
         </form>
-        <Flex gap={3} direction={{ base: "column", md: "row" }}>
+
+        {/* Uploaded and Compressed Images Section */}
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          gap={4}
+          marginTop="2rem"
+          justifyContent="space-between"
+        >
+          {/* Accepted Files */}
           <Box>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
+            <Heading
+              as="h3"
+              fontSize={{ base: "20px", md: "22px" }}
+              marginBottom={3}
+            >
               Accepted Files
             </Heading>
             {isUploading && <Spinner />}
             {file && (
-              <Card width="300px" marginY={4}>
+              <Card width={{ base: "100%", md: "300px" }} marginY={4}>
                 <CardBody>
-                  <Image src={file.preview} alt={file.name} />
+                  <Image
+                    src={file.preview}
+                    alt={file.name}
+                    objectFit="cover"
+                    borderRadius="md"
+                  />
                 </CardBody>
               </Card>
             )}
           </Box>
-          <Spacer />
-            <Box>
-              <Heading as="h3" fontSize="25px" marginTop={3}>
-                 your image
-              </Heading>
-              {compressedImageUrl && (
-                <Card width="300px" marginY={4}>
-                  <CardBody>
-                    <Image src={compressedImageUrl} alt="compressedImage" />
-                  </CardBody>
-                </Card>
-              )}
-            </Box>
-          </Flex>
-        </CardBody>
-      </Card>
-    );
-  };
+
+          {/* Compressed Image */}
+          <Box>
+            <Heading
+              as="h3"
+              fontSize={{ base: "20px", md: "22px" }}
+              marginBottom={3}
+            >
+              Your Image
+            </Heading>
+            {compressedImageUrl && (
+              <Card width={{ base: "100%", md: "300px" }} marginY={4}>
+                <CardBody>
+                  <Image
+                    src={compressedImageUrl}
+                    alt="compressedImage"
+                    objectFit="cover"
+                    borderRadius="md"
+                  />
+                </CardBody>
+              </Card>
+            )}
+          </Box>
+        </Flex>
+      </CardBody>
+    </Card>
+  );
+};
 
 export default Uploader;

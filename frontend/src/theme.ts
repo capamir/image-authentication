@@ -20,9 +20,20 @@ const theme = extendTheme({
       900: "#111",
     },
     text: "#81afdd",
-    gradient: "var(--gradient-text)",
+    gradient: {
+      light: "linear-gradient(89.97deg, #ae67fa 1.84%, #f49867 102.67%)",
+      dark: "linear-gradient(89.97deg, #c084ff 1.84%, #ff6f61 102.67%)",
+    },
     colorBg: "#040c18",
     colorFooter: "var(--color-footer)",
+  },
+  styles: {
+    global: {
+      body: {
+        bg: "colorBg",
+        color: "text",
+      },
+    },
   },
 });
 
