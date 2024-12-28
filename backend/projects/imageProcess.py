@@ -1,16 +1,12 @@
-
-
-
 import cv2
 import numpy as np
 import hashlib
-import secrets
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-from Crypto.Random import get_random_bytes
 import base64
-
+from scipy.ndimage import zoom
 import json
+
 
 def extract_msb(image_array, k):
     try:
@@ -18,18 +14,13 @@ def extract_msb(image_array, k):
             msb = image_array >> (8 - k)
             new_img = msb
         elif len(image_array.shape) == 3:  # RGB image
-            new_img = np.zeros_like(image_array)
-            for i in range(3):  # Loop through RGB channels
-                # Extract k most significant bits
-                msb = image_array[:, :, i] >> (8 - k)
-                # Add the MSB to the new image
-                new_img[:, :, i] = msb
+            # Vectorized operation for RGB channels
+            new_img = image_array >> (8 - k)
         else:
             raise ValueError("Unsupported image format")
         return new_img
     except Exception as e:
         raise ValueError(f"Error in extracting MSB: {str(e)}")
-
 
 def zigzag(input, percentage):
     if percentage <= 0 or percentage >= 100:
@@ -98,39 +89,6 @@ def zigzag(input, percentage):
             break
 
     return output
-
-def block_dct_zigzag(image, block_size, zigzag_percentage):
-
-    quantization_matrix = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
-                                        [12, 12, 14, 19, 26, 58, 60, 55],
-                                        [14, 13, 16, 24, 40, 57, 69, 56],
-
-                                        [14, 17, 22, 29, 51, 87, 80, 62],
-                                        [18, 22, 37, 56, 68, 109, 103, 77],
-                                        [24, 35, 55, 64, 81, 104, 113, 92],
-                                        [49, 64, 78, 87, 103, 121, 120, 101],
-                                        [72, 92, 95, 98, 112, 100, 103, 99]])
-    h, w = image.shape[:2]
-    num_blocks_h = h // block_size
-    num_blocks_w = w // block_size
-    
-    columns_dict = {j: [] for j in range(num_blocks_w)}
-    
-    for i in range(num_blocks_h):
-        for j in range(num_blocks_w):
-            block = image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
-            block_dct = cv2.dct(np.float32(block))
-        
-            block_dct_quantized = np.round(block_dct / quantization_matrix) * quantization_matrix
-
-            zigzag_block = zigzag(block_dct_quantized, zigzag_percentage)
-            zigzag_block = np.abs(zigzag_block) 
-            columns_dict[j].append(zigzag_block)
-
-    return columns_dict
-
-
-
 def inverse_zigzag(input_1d, shape):
     vmax, hmax = shape
 
@@ -189,6 +147,45 @@ def inverse_zigzag(input_1d, shape):
 
     return output
 
+def block_dct_zigzag(image, block_size, zigzag_percentage):
+    quantization_matrix = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
+                                    [12, 12, 14, 19, 26, 58, 60, 55],
+                                    [14, 13, 16, 24, 40, 57, 69, 56],
+                                    [14, 17, 22, 29, 51, 87, 80, 62],
+                                    [18, 22, 37, 56, 68, 109, 103, 77],
+                                    [24, 35, 55, 64, 81, 104, 113, 92],
+                                    [49, 64, 78, 87, 103, 121, 120, 101],
+                                    [72, 92, 95, 98, 112, 100, 103, 99]])
+
+        # Scaling factor
+    n=block_size
+    scale_factor = n/ 8
+
+        # Use scipy's zoom function to interpolate the matrix
+    quantization_matrix_n_N = zoom(quantization_matrix, scale_factor, order=1)
+
+        # Round to integers (quantization matrices are typically integers)
+    quantization_matrix_n_N = np.round(quantization_matrix_n_N).astype(int)
+
+
+    h, w = image.shape[:2]
+    num_blocks_h = h // block_size
+    num_blocks_w = w // block_size
+
+    columns_dict = {j: [] for j in range(num_blocks_w)}
+
+    # Vectorized DCT and quantization
+    for i in range(num_blocks_h):
+        for j in range(num_blocks_w):
+            block = image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
+            block_dct = cv2.dct(np.float32(block))
+            block_dct_quantized = np.round(block_dct / quantization_matrix_n_N) * quantization_matrix_n_N
+            zigzag_block = zigzag(block_dct_quantized, zigzag_percentage)
+            zigzag_block = np.abs(zigzag_block)
+            columns_dict[j].append(zigzag_block)
+
+    return columns_dict
+
 def format_dict_without_quotes(input_dict):
     formatted_pairs = []
     for key, value in input_dict.items():
@@ -203,30 +200,22 @@ def format_dict_without_quotes(input_dict):
     formatted_output = "{" + ", ".join(formatted_pairs) + "}"
     return formatted_output
 
-
 def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
     if not isinstance(columns_dict, dict):
         raise TypeError("Expected 'columns_dict' to be a dictionary.")
-    
+
     num_blocks_h = original_shape[0] // block_size
     num_blocks_w = original_shape[1] // block_size
-    
+
     reconstructed_image = np.zeros(original_shape, dtype=np.float32)
-    
+
     for j in range(num_blocks_w):
         if j in columns_dict and isinstance(columns_dict[j], list):
             for i in range(num_blocks_h):
                 if len(columns_dict[j]) > i:
                     zigzag_block = columns_dict[j][i]
-                    
-                    # Inverse zigzag to get block
-                    zigzag_shape = (block_size, block_size)
-                    dct_block = inverse_zigzag(zigzag_block, zigzag_shape)
-                    
-                    # Apply inverse DCT
+                    dct_block = inverse_zigzag(zigzag_block, (block_size, block_size))
                     block = cv2.idct(dct_block.astype(np.float32))
-                    
-                    # Place block in reconstructed image
                     reconstructed_image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size] = block
                 else:
                     print(f"Missing block at position ({i}, {j})")
@@ -234,7 +223,6 @@ def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
             print(f"Missing or invalid data for column {j}")
 
     return reconstructed_image
-
 
 def hash_dictionary_elements_sha256(input_dict):
 
@@ -249,13 +237,6 @@ def hash_dictionary_elements_sha256(input_dict):
         hashed_dict[key] = hashed_value
     
     return hashed_dict
-
-
-
-
-
-
-
 
 def compare_dicts(dict1, dict2):
     differing_keys = []
@@ -291,6 +272,16 @@ def encrypt_array(array, key):
         'shape': shape_encoded,
         'iv': iv_encoded
     }
+
+def encrypt_dict(data, key):
+    encrypted_dict = {}
+    for k, arrays in data.items():
+        encrypted_arrays = []
+        for array in arrays:
+            encrypted_data = encrypt_array(array, key)
+            encrypted_arrays.append(encrypted_data)
+        encrypted_dict[k] = encrypted_arrays
+    return encrypted_dict
 
 def decrypt_array(encrypted_data, key):
     # Assuming encrypted_data is a dictionary
@@ -328,16 +319,6 @@ def decrypt_array(encrypted_data, key):
         
         return array
 
-def encrypt_dict(data, key):
-    encrypted_dict = {}
-    for k, arrays in data.items():
-        encrypted_arrays = []
-        for array in arrays:
-            encrypted_data = encrypt_array(array, key)
-            encrypted_arrays.append(encrypted_data)
-        encrypted_dict[k] = encrypted_arrays
-    return encrypted_dict
-
 def decrypt_dict(encrypted_data_dict, key, indices_to_decrypt):
     decrypted_dict = {}
     
@@ -354,7 +335,6 @@ def decrypt_dict(encrypted_data_dict, key, indices_to_decrypt):
 
     return decrypted_dict
 
-
 def replace_values(dict1, dict2):
 
     keys1 = list(dict2.keys())
@@ -365,13 +345,12 @@ def replace_values(dict1, dict2):
         dict1[key] = dict2[key]
     return dict1
 
-
-
-
-def blur_other_columns(image, differences, block_size):
+def blur_other_columns(image, differences, block_size, blur_strength=400):
 
     # Create a blurred version of the original image
-    blurred_image = cv2.GaussianBlur(image, (31, 31),10)
+    # Adjust the kernel size and sigma based on blur_strength
+    kernel_size = (2 * blur_strength + 1, 2 * blur_strength + 1)  # Ensure kernel size is odd
+    blurred_image = cv2.GaussianBlur(image, kernel_size, blur_strength)
     
     # Create a mask to retain the specified differing columns
     mask = np.zeros_like(image, dtype=np.uint8)
@@ -413,3 +392,9 @@ def generate_secret_key_from_file(file_obj, length):
     extracted_bytes = extracted_bits.to_bytes(length, byteorder='big')
 
     return extracted_bytes
+
+
+
+
+
+

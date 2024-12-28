@@ -261,8 +261,8 @@ const UploaderKey = () => {
             )}
           </Box>
 
-          <Box marginLeft={150}>
-            <Heading as="h3" fontSize="25px" marginTop={3}>
+          <Box marginLeft={450}>
+            <Heading as="h3" fontSize="25px" marginTop={3} >
               Manipulated columns
             </Heading>
             {compressedImageUrl && (

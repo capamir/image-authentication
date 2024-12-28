@@ -12,14 +12,13 @@ import {
     Text,
     IconButton,
   } from "@chakra-ui/react";
-  import { logo } from "../assets";
+
   import { RiMenu3Line } from "react-icons/ri";
   import { IconType } from "react-icons";
   import { IoHomeOutline } from "react-icons/io5";
   import { MdOutlineRoomPreferences } from "react-icons/md";
   import { RiTeamLine } from "react-icons/ri";
-  import { MdOutlineContactPhone } from "react-icons/md";
-  
+ 
   interface LinkType {
     label: string;
     href: string;
@@ -41,12 +40,7 @@ import {
         alignItems="center"
         background="colorBg"
       >
-        {/* Logo */}
-        <Box>
-          <Text color="white" fontSize="24px" fontWeight="bold">
-            Logo
-          </Text>
-        </Box>
+    
   
         {/* Desktop Links */}
         <Show above="lg">

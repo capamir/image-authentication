@@ -67,7 +67,7 @@ const Header = () => {
         <Image
           src={ai}
           alt="AI Illustration"
-          width={{ base: "300px", md: "350px", lg: "400px" }}
+          width={{ base: "400px", md: "350px", lg: "600px" }}
           height={{ base: "250px", md: "300px", lg: "350px" }}
           objectFit="cover"
         />

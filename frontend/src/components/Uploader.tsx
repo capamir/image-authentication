@@ -147,7 +147,7 @@ const Uploader = () => {
   return (
     <Card
       className="upload__bg"
-      width={{ base: "95%", md: "90%", lg: "80%" }}
+      width={{ base: "95%", md: "90%", lg: "90%" }}
       marginX="auto"
       padding={{ base: "1.5rem", md: "2rem" }}
       marginY={5}
@@ -265,7 +265,7 @@ const Uploader = () => {
             </Heading>
             {isUploading && <Spinner />}
             {file && (
-              <Card width={{ base: "100%", md: "300px" }} marginY={4}>
+              <Card width={{ base: "100%", md: "400px" }} marginY={4}>
                 <CardBody>
                   <Image
                     src={file.preview}
@@ -285,10 +285,10 @@ const Uploader = () => {
               fontSize={{ base: "20px", md: "22px" }}
               marginBottom={3}
             >
-              Your Image
+              stored Image
             </Heading>
             {compressedImageUrl && (
-              <Card width={{ base: "100%", md: "300px" }} marginY={4}>
+              <Card width={{ base: "100%", md: "400px" }} marginY={4} > 
                 <CardBody>
                   <Image
                     src={compressedImageUrl}
