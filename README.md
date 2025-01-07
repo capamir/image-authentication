@@ -1,61 +1,82 @@
-Image Authentication and Blockchain Storage Platform
-This platform provides a secure way to store, verify, and restore images using encryption, blockchain technology, and advanced image processing methods such as Discrete Cosine Transform (DCT).
+# Image Authentication and Verification Platform
 
-Features
+## Description
 
-Image Storage:
-Clients upload their images to the platform.
-The platform encrypts the image using secure functions and processes the image using DCT for efficient storage and retrieval.
-The encrypted image and processed data are saved in a blockchain for secure and tamper-proof storage.
+This platform provides a secure and efficient solution for image authentication and verification. It is built as a web application using **Django** for the backend and **React.js** for the frontend. The backend, powered by **Django REST Framework (DRF)**, manages image processing, encryption, and blockchain integration. React.js delivers a dynamic and user-friendly interface, while the platform ensures the integrity and security of images through advanced cryptographic techniques.
 
-Image Authentication:
-A client submits an image to verify its authenticity.
-The platform decrypts and compares the image data using the stored DCT and other processing methods.
-It confirms whether the image is authentic and restores the original, if verified.
+## Technologies
 
-How It Works:
+- **Backend**: Django, Django REST Framework (DRF)
+- **Frontend**: React.js, React Router DOM, Axios
+- **Image Processing**: Grayscale Conversion, MSB Extraction, Discrete Cosine Transform (DCT), Zigzag Reduction
+- **Encryption**: AES Encryption
+- **Blockchain**: Private Blockchain for tamper-proof storage and traceability
 
-Image Storage
-The client uploads an image.
-The platform performs:
-DCT (Discrete Cosine Transform): Converts the image into a frequency domain representation for better compression and analysis.
-Encryption: Secures the image data.
-Blockchain Storage: Saves the encrypted image and DCT data in a tamper-proof ledger.
+## Features
+
+- **Image Authentication**: Secure image uploads and verification using advanced cryptographic techniques.
+- **Image Integrity**: Detects and restores tampered images to their original authenticated state.
+- **Efficient Storage**: Uses blockchain to securely store image hashes and encrypted data.
+- **Scalable**: Designed to handle large datasets with high security and reliability.
+
+## Workflow
+
+1. **Authentication (Step 1)**: 
+   - Uploaded images are processed by converting them to grayscale.
+   - The **Most Significant Bit (MSB)** is extracted and the image is divided into blocks.
+   - Each block undergoes **Discrete Cosine Transform (DCT)**, and a percentage of coefficients are removed using the **Zigzag algorithm** for data reduction.
+   - The processed blocks are hashed to create a unique identifier.
+   - This hash and the encrypted DCT coefficients are stored in a **private blockchain**, ensuring tamper-proof storage.
+
+2. **Verification (Step 2)**:
+   - The client uploads an image for verification.
+   - The same processing steps are applied to the uploaded image to generate its hash.
+   - The generated hash is compared with the original image’s hash stored in the blockchain.
+   - Discrepancies are identified, and the columns with differences are decrypted using **AES** and restored to their original state, ensuring the integrity of the image.
+
+## Requirements
+
+- Python 3.x
+- Node.js
+- npm or yarn
+- Pipenv (for backend)
+- Blockchain setup (refer to the platform documentation for setup)
+
+## Installation
+
+### Backend 
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/yourrepository.git
+   cd yourrepository
+
+2. Navigate to the backend folder:
+
+    cd backend
+
+3. Install Pipenv if you haven't already:
+
+    pip install pipenv
+
+4. Install the backend dependencies:
+    pipenv install
+
+5. Activate the virtual environment:
+    pipenv shell
+
+6. Run the Django development server:
+    python manage.py runserver
 
 
-Image Authentication
-A client submits an image for verification.
+### Frontend 
 
-The platform performs:
-Decryption: Retrieves the stored image data.
-DCT Analysis: Compares the frequency-domain data of the submitted image with the stored data.
-Verification: Confirms the authenticity of the image.
-Restoration: Restores the image if it matches.
+1. Navigate to the frontend folder in another terminal:
 
+    cd frontend
 
-Technologies Used
-Encryption/Decryption: For secure image storage and retrieval.
-DCT (Discrete Cosine Transform): To analyze and process image data efficiently.
-Blockchain: For secure and tamper-proof storage.
-Client-Server Architecture: For efficient communication and processing.
+2. Install the frontend dependencies:
+    npm install
 
-
-Installation
-Clone the repository.
-Install dependencies:
-npm install
-...
-Set up the blockchain environment and configure the encryption keys.
-
-
-Usage
-
-Upload an Image: Clients can upload an image to be securely stored on the blockchain.
-Verify an Image: Submit an image to check its authenticity and retrieve the original, if valid.
-Contributing
-Contributions are welcome! Feel free to open issues or submit pull requests for enhancements or bug fixes.
-
-
-License
-.....
-
+3. Run the React development server:
+    npm run dev
