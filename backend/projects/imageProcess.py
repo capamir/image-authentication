@@ -385,7 +385,7 @@ def generate_secret_key_from_file(file_obj, length):
     else:
         raise ValueError("File content must be a valid binary or hexadecimal string.")
 
-    # Extract the first `length * 8` bits (matching the desired length in bytes)
+    # Extract the first `length * 8` bits
     total_bits = length * 8
     extracted_bits = (bit_data >> max(0, bit_data.bit_length() - total_bits)) & ((1 << total_bits) - 1)
     extracted_bytes = extracted_bits.to_bytes(length, byteorder='big')

@@ -54,7 +54,7 @@ def uploadImage(request):
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
         #Extract MSB for compression
-        msb_image = extract_msb(gray_image, 4)  
+        msb_image = extract_msb(gray_image, 5)  
         logger.debug(f"MSB Image Shape: {msb_image.shape}")
         block_size = 16
         percentage = percentage_received
@@ -117,7 +117,6 @@ def uploadImage(request):
 class ImageAddressViewSet(viewsets.ViewSet):
     def create(self, request):
         
-        serializer = ImageAddressSerializer(data=request.data)
         image_file = request.FILES.get('image')
         image_key = request.data.get('key')
         index = int(request.data.get('address'))
@@ -137,7 +136,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
         key = generate_secret_key_from_file(image_key,16)
         image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
-        gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)
+        gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY),5)
 
 
         # process image
@@ -162,7 +161,6 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
         if (key != None):
             
-           
             # decrypting dct columns
             decrypted_columns = decrypt_dict(encrypted_data, key, differences)
             decrypted_columns = {int(key): value for key, value in decrypted_columns.items()}
