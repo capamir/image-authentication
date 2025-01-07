@@ -71,18 +71,19 @@ This platform provides a secure and efficient solution for image authentication 
 
 6. Run the Django development server:
    ```bash
-
     python manage.py runserver
 
 
 ### Frontend 
 
 1. Navigate to the frontend folder in another terminal:
-
+    ```bash
     cd frontend
 
 2. Install the frontend dependencies:
+    ```bash
     npm install
 
 3. Run the React development server:
+    ```bash
     npm run dev
