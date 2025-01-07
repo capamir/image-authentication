@@ -52,20 +52,26 @@ This platform provides a secure and efficient solution for image authentication 
    cd yourrepository
 
 2. Navigate to the backend folder:
+   ```bash
 
     cd backend
 
 3. Install Pipenv if you haven't already:
-
+   ```bash
     pip install pipenv
 
 4. Install the backend dependencies:
+   ```bash
     pipenv install
 
 5. Activate the virtual environment:
+   ```bash
+
     pipenv shell
 
 6. Run the Django development server:
+   ```bash
+
     python manage.py runserver
 
 
