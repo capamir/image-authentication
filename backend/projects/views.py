@@ -52,8 +52,7 @@ def uploadImage(request):
 
         # Convert to grayscale
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-
+        
         #Extract MSB for compression
         msb_image = extract_msb(gray_image, 4)  
         logger.debug(f"MSB Image Shape: {msb_image.shape}")
@@ -122,6 +121,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
         image_file = request.FILES.get('image')
         image_key = request.data.get('key')
         index = int(request.data.get('address'))
+        percentage = int(request.data.get('dct'))
 
 
          # Validate inputs
@@ -135,7 +135,6 @@ class ImageAddressViewSet(viewsets.ViewSet):
             return Response({'error': 'Percentage not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-        percentage = int(request.data.get('dct'))
         key = generate_secret_key_from_file(image_key,16)
         image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
         gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 4)

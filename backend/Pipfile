@@ -10,6 +10,7 @@ django-cors-headers = "*"
 opencv-python = "*"
 pillow = "*"
 pycryptodome = "*"
+jsonfield = "*"
 
 [dev-packages]
 

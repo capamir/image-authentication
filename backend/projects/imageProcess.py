@@ -22,6 +22,7 @@ def extract_msb(image_array, k):
     except Exception as e:
         raise ValueError(f"Error in extracting MSB: {str(e)}")
 
+
 def zigzag(input, percentage):
     if percentage <= 0 or percentage >= 100:
         raise ValueError("Percentage should be between 0 and 100 (exclusive)")
@@ -89,6 +90,8 @@ def zigzag(input, percentage):
             break
 
     return output
+
+
 def inverse_zigzag(input_1d, shape):
     vmax, hmax = shape
 
@@ -147,58 +150,52 @@ def inverse_zigzag(input_1d, shape):
 
     return output
 
+
 def block_dct_zigzag(image, block_size, zigzag_percentage):
-    quantization_matrix = np.array([[16, 11, 10, 16, 24, 40, 51, 61],
-                                    [12, 12, 14, 19, 26, 58, 60, 55],
-                                    [14, 13, 16, 24, 40, 57, 69, 56],
-                                    [14, 17, 22, 29, 51, 87, 80, 62],
-                                    [18, 22, 37, 56, 68, 109, 103, 77],
-                                    [24, 35, 55, 64, 81, 104, 113, 92],
-                                    [49, 64, 78, 87, 103, 121, 120, 101],
-                                    [72, 92, 95, 98, 112, 100, 103, 99]])
 
-        # Scaling factor
-    n=block_size
-    scale_factor = n/ 8
-
-        # Use scipy's zoom function to interpolate the matrix
-    quantization_matrix_n_N = zoom(quantization_matrix, scale_factor, order=1)
-
-        # Round to integers (quantization matrices are typically integers)
+    # Define the quantization matrix 
+    base_matrix = np.array([
+        [16, 11, 10, 16, 24, 40, 51, 61],
+        [12, 12, 14, 19, 26, 58, 60, 55],
+        [14, 13, 16, 24, 40, 57, 69, 56],
+        [14, 17, 22, 29, 51, 87, 80, 62],
+        [18, 22, 37, 56, 68, 109, 103, 77],
+        [24, 35, 55, 64, 81, 104, 113, 92],
+        [49, 64, 78, 87, 103, 121, 120, 101],
+        [72, 92, 95, 98, 112, 100, 103, 99]
+    ])
+    scale_factor = block_size / 8
+    quantization_matrix_n_N = zoom(base_matrix, scale_factor, order=1)
     quantization_matrix_n_N = np.round(quantization_matrix_n_N).astype(int)
 
-
+    # Image dimensions
     h, w = image.shape[:2]
     num_blocks_h = h // block_size
     num_blocks_w = w // block_size
 
+    # Initialize columns dictionary
     columns_dict = {j: [] for j in range(num_blocks_w)}
 
-    # Vectorized DCT and quantization
+    # Process each block
     for i in range(num_blocks_h):
         for j in range(num_blocks_w):
+            # Extract the block
             block = image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
+
+            # Apply DCT
             block_dct = cv2.dct(np.float32(block))
+
+            # Quantize DCT coefficients
             block_dct_quantized = np.round(block_dct / quantization_matrix_n_N) * quantization_matrix_n_N
+
+            # Perform zigzag traversal
             zigzag_block = zigzag(block_dct_quantized, zigzag_percentage)
-            zigzag_block = np.abs(zigzag_block)
-            columns_dict[j].append(zigzag_block)
+
+            # Add to the respective column
+            columns_dict[j].append(np.abs(zigzag_block))
 
     return columns_dict
 
-def format_dict_without_quotes(input_dict):
-    formatted_pairs = []
-    for key, value in input_dict.items():
-        # Remove surrounding quotes from string values
-        if isinstance(value, str):
-            value = value.strip('"\'')
-
-        # Format key-value pair
-        formatted_pairs.append(f"{key}: {value}")
-
-    # Join formatted pairs with commas and enclose in curly braces
-    formatted_output = "{" + ", ".join(formatted_pairs) + "}"
-    return formatted_output
 
 def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
     if not isinstance(columns_dict, dict):
@@ -210,17 +207,26 @@ def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
     reconstructed_image = np.zeros(original_shape, dtype=np.float32)
 
     for j in range(num_blocks_w):
-        if j in columns_dict and isinstance(columns_dict[j], list):
-            for i in range(num_blocks_h):
-                if len(columns_dict[j]) > i:
-                    zigzag_block = columns_dict[j][i]
-                    dct_block = inverse_zigzag(zigzag_block, (block_size, block_size))
-                    block = cv2.idct(dct_block.astype(np.float32))
-                    reconstructed_image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size] = block
-                else:
-                    print(f"Missing block at position ({i}, {j})")
-        else:
-            print(f"Missing or invalid data for column {j}")
+        column_data = columns_dict.get(j, None)
+        if not isinstance(column_data, list):
+            continue  # Skip missing or invalid columns
+
+        for i, zigzag_block in enumerate(column_data):
+            if i >= num_blocks_h:
+                break  # Avoid processing extra rows in the column
+            
+            # Precompute block positions
+            row_start = i * block_size
+            row_end = row_start + block_size
+            col_start = j * block_size
+            col_end = col_start + block_size
+
+            # Reconstruct the block
+            dct_block = inverse_zigzag(zigzag_block, (block_size, block_size))
+            block = cv2.idct(dct_block.astype(np.float32))
+
+            # Insert block into the image
+            reconstructed_image[row_start:row_end, col_start:col_end] = block
 
     return reconstructed_image
 
@@ -238,32 +244,18 @@ def hash_dictionary_elements_sha256(input_dict):
     
     return hashed_dict
 
-def compare_dicts(dict1, dict2):
-    differing_keys = []
-    for key in dict1:
-        if key in dict2:
-            if str(dict2[key]) != str(dict1[key]) :
-                differing_keys.append(key)
-    return differing_keys
-
 def encrypt_array(array, key):
     # Convert the array to bytes
     byte_data = array.tobytes()
-    
-    # Include dtype and shape information
-    dtype = str(array.dtype)
-    shape = array.shape
     
     # Encrypt
     cipher = AES.new(key, AES.MODE_CBC)
     ciphertext = cipher.encrypt(pad(byte_data, AES.block_size))
     
-    # Encode for transport
+    # Encode for transport (single encode operation)
     ciphertext_encoded = base64.b64encode(ciphertext).decode('utf-8')
-    
-    # Encode dtype and shape for transport
-    dtype_encoded = base64.b64encode(dtype.encode()).decode('utf-8')
-    shape_encoded = base64.b64encode(json.dumps(shape).encode()).decode('utf-8')
+    dtype_encoded = base64.b64encode(str(array.dtype).encode()).decode('utf-8')
+    shape_encoded = base64.b64encode(json.dumps(array.shape).encode()).decode('utf-8')
     iv_encoded = base64.b64encode(cipher.iv).decode('utf-8')  # Include IV
     
     return {
@@ -274,14 +266,13 @@ def encrypt_array(array, key):
     }
 
 def encrypt_dict(data, key):
-    encrypted_dict = {}
-    for k, arrays in data.items():
-        encrypted_arrays = []
-        for array in arrays:
-            encrypted_data = encrypt_array(array, key)
-            encrypted_arrays.append(encrypted_data)
-        encrypted_dict[k] = encrypted_arrays
-    return encrypted_dict
+    return {
+        k: [
+            encrypt_array(array, key)
+            for array in arrays
+        ]
+        for k, arrays in data.items()
+    }
 
 def decrypt_array(encrypted_data, key):
     # Assuming encrypted_data is a dictionary
@@ -334,6 +325,14 @@ def decrypt_dict(encrypted_data_dict, key, indices_to_decrypt):
             return "Index out of range"
 
     return decrypted_dict
+
+def compare_dicts(dict1, dict2):
+    differing_keys = []
+    for key in dict1:
+        if key in dict2:
+            if str(dict2[key]) != str(dict1[key]) :
+                differing_keys.append(key)
+    return differing_keys
 
 def replace_values(dict1, dict2):
 

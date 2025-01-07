@@ -260,8 +260,8 @@ const UploaderKey = () => {
               </Card>
             )}
           </Box>
-
-          <Box marginLeft={450}>
+          <Spacer />
+          <Box>
             <Heading as="h3" fontSize="25px" marginTop={3} >
               Manipulated columns
             </Heading>
