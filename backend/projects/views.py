@@ -50,27 +50,23 @@ def uploadImage(request):
         if image is None:
             return Response({'error': 'Failed to decode image'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Convert to grayscale
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
-        #Extract MSB for compression
-        msb_image = extract_msb(gray_image, 5)  
-        logger.debug(f"MSB Image Shape: {msb_image.shape}")
-        block_size = 16
-        percentage = percentage_received
+        # Extract the k most significant bits (e.g., k=4)
+        k = 5
+        image = extract_msb(image, k)
 
-        # Process the image using DCT Zigzag
-        columns_dict = block_dct_zigzag(msb_image, block_size, percentage)
-        logger.debug(f"Columns Dictionary: {columns_dict}")
+
+        # Apply block-based DCT, quantization, and zigzag traversal
+        block_size = 8 # Block size (e.g., 8x8)
+        zigzag_percentage = 50
+        columns_dict = block_dct_zigzag_colored(image, block_size, zigzag_percentage)
         
 
-        # Reconstruct the image from columns
-        reconstructed_image = reconstruct_image_from_columns(columns_dict, block_size, msb_image.shape)
-        logger.debug(f"Reconstructed Image Shape: {reconstructed_image.shape}")
+        restored_image = reconstruct_colored_image(columns_dict, block_size, image.shape)
 
 
-        # Normalize the reconstructed image to ensure the brightness is retained
-        reconstructed_image_normalized = cv2.normalize(reconstructed_image, None, 0, 255, cv2.NORM_MINMAX)
+
+          # Normalize the reconstructed image to ensure the brightness is retained
+        reconstructed_image_normalized = cv2.normalize(restored_image, None, 0, 255, cv2.NORM_MINMAX)
         reconstructed_image_normalized = reconstructed_image_normalized.astype(np.uint8)  # Ensure data type is uint8
 
 
@@ -78,11 +74,14 @@ def uploadImage(request):
         _, reconstructed_image_encoded = cv2.imencode('.png', reconstructed_image_normalized)
         reconstructed_image_base64 = base64.b64encode(reconstructed_image_encoded).decode('utf-8')
 
-        #encrypt reconstructed image
+        # #encrypt reconstructed image
         if(uploaded_file!=None):
             key = generate_secret_key_from_file(uploaded_file,16)
+            print(key)
         
-            columns_hashed = hash_dictionary_elements_sha256(columns_dict)
+            columns_hashed = hash_columns_dict(columns_dict)
+
+            print(columns_hashed)
             encrypted_columns = encrypt_dict(columns_dict, key)
             encrypted_columns=json.dumps(encrypted_columns, indent=2)
  
@@ -99,6 +98,7 @@ def uploadImage(request):
         block.save()
 
         encoded_key =base64.b64encode(key).decode('utf-8')
+        print(encoded_key)
      
         return Response({
             'message': 'Image uploaded successfully',
@@ -136,16 +136,19 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
         key = generate_secret_key_from_file(image_key,16)
         image = cv2.imdecode(np.fromstring(image_file.read(), np.uint8), cv2.IMREAD_COLOR)
-        gray_image = extract_msb(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY),5)
+        
+
+        k = 5
+        image = extract_msb(image, k)
 
 
-        # process image
-        block_size = 16
-        columns_dict = block_dct_zigzag(gray_image, block_size, percentage)
-
-    
+        # Apply block-based DCT, quantization, and zigzag traversal
+        block_size = 8 # Block size (e.g., 8x8)
+        zigzag_percentage = 50
+        columns_dict = block_dct_zigzag_colored(image, block_size, zigzag_percentage)
+        
         # hashing dct columns
-        columns_hashed2 = hash_dictionary_elements_sha256(columns_dict)
+        columns_hashed2 = hash_columns_dict(columns_dict)
 
         # import block
         block_index = index
@@ -157,21 +160,22 @@ class ImageAddressViewSet(viewsets.ViewSet):
         # compare images
         differences = compare_dicts(orginal_hash, columns_hashed2)
 
+        print(differences)
+
     
 
         if (key != None):
             
             # decrypting dct columns
             decrypted_columns = decrypt_dict(encrypted_data, key, differences)
-            decrypted_columns = {int(key): value for key, value in decrypted_columns.items()}
-            
+           
         
             # restructure image
-            recovered_columns = replace_values(columns_dict, decrypted_columns)
-            reconstructed_image = reconstruct_image_from_columns(recovered_columns, block_size, gray_image.shape)
+            recovered_columns = replace_values(columns_dict, decrypted_columns,)
+            restored_image = reconstruct_colored_image(recovered_columns, block_size, image.shape)
 
             # Normalize the highlighted image to ensure the brightness is retained
-            reconstructed_image = cv2.normalize(reconstructed_image, None, 0, 255, cv2.NORM_MINMAX)
+            reconstructed_image = cv2.normalize(restored_image, None, 0, 255, cv2.NORM_MINMAX)
             reconstructed_image = reconstructed_image.astype(np.uint8)
 
             # Encode highlighted image for JSON response

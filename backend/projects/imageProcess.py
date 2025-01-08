@@ -8,7 +8,9 @@ from scipy.ndimage import zoom
 import json
 
 
+
 def extract_msb(image_array, k):
+  
     try:
         if len(image_array.shape) == 2:  # Grayscale image
             msb = image_array >> (8 - k)
@@ -24,6 +26,9 @@ def extract_msb(image_array, k):
 
 
 def zigzag(input, percentage):
+    """
+    Perform zigzag traversal on a 2D array and retain a percentage of elements.
+    """
     if percentage <= 0 or percentage >= 100:
         raise ValueError("Percentage should be between 0 and 100 (exclusive)")
 
@@ -91,68 +96,7 @@ def zigzag(input, percentage):
 
     return output
 
-
-def inverse_zigzag(input_1d, shape):
-    vmax, hmax = shape
-
-    h = 0  # horizontal index
-    v = 0  # vertical index
-    i = 0  # index for input_1d array
-
-    output = np.zeros((vmax, hmax), dtype=input_1d.dtype)  # output matrix
-
-    while ((v < vmax) and (h < hmax) and (i < len(input_1d))):
-        
-        # Going up
-        if ((h + v) % 2) == 0:
-            if (v == 0):  # If at the first row
-                output[v, h] = input_1d[i]  # Store the current element
-                if (h == hmax - 1):
-                    v = v + 1
-                else:
-                    h = h + 1
-                i = i + 1
-            
-            elif ((h == hmax - 1) and (v < vmax)):  # If at the last column
-                output[v, h] = input_1d[i]
-                v = v + 1
-                i = i + 1
-            
-            elif ((v > 0) and (h < hmax - 1)):  # All other cases
-                output[v, h] = input_1d[i]
-                v = v - 1
-                h = h + 1
-                i = i + 1
-        
-        else:  # Going down
-            if ((v == vmax - 1) and (h <= hmax - 1)):  # If at the last row
-                output[v, h] = input_1d[i]
-                h = h + 1
-                i = i + 1
-            
-            elif (h == 0):  # If at the first column
-                output[v, h] = input_1d[i]
-                if (v == vmax - 1):
-                    h = h + 1
-                else:
-                    v = v + 1
-                i = i + 1
-            
-            elif ((v < vmax - 1) and (h > 0)):  # All other cases
-                output[v, h] = input_1d[i]
-                v = v + 1
-                h = h - 1
-                i = i + 1
-        
-        if ((v == vmax - 1) and (h == hmax - 1)):  # Bottom-right element
-            output[v, h] = input_1d[i]
-            break
-
-    return output
-
-
-def block_dct_zigzag(image, block_size, zigzag_percentage):
-
+def block_dct_zigzag_colored(image, block_size, zigzag_percentage):
     # Define the quantization matrix 
     base_matrix = np.array([
         [16, 11, 10, 16, 24, 40, 51, 61],
@@ -168,36 +112,77 @@ def block_dct_zigzag(image, block_size, zigzag_percentage):
     quantization_matrix_n_N = zoom(base_matrix, scale_factor, order=1)
     quantization_matrix_n_N = np.round(quantization_matrix_n_N).astype(int)
 
+    # Convert image to YCrCb color space
+    image_ycrcb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+
     # Image dimensions
-    h, w = image.shape[:2]
+    h, w = image_ycrcb.shape[:2]
     num_blocks_h = h // block_size
     num_blocks_w = w // block_size
 
-    # Initialize columns dictionary
-    columns_dict = {j: [] for j in range(num_blocks_w)}
+    # Initialize columns dictionary for each channel
+    columns_dict = {'Y': {j: [] for j in range(num_blocks_w)},
+                    'Cr': {j: [] for j in range(num_blocks_w)},
+                    'Cb': {j: [] for j in range(num_blocks_w)}}
 
-    # Process each block
-    for i in range(num_blocks_h):
-        for j in range(num_blocks_w):
-            # Extract the block
-            block = image[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
+    # Process each channel separately
+    for channel_idx, channel_name in enumerate(['Y', 'Cr', 'Cb']):
+        channel_data = image_ycrcb[:, :, channel_idx]
 
-            # Apply DCT
-            block_dct = cv2.dct(np.float32(block))
+        # Process each block
+        for i in range(num_blocks_h):
+            for j in range(num_blocks_w):
+                # Extract the block
+                block = channel_data[i * block_size:(i + 1) * block_size, j * block_size:(j + 1) * block_size]
 
-            # Quantize DCT coefficients
-            block_dct_quantized = np.round(block_dct / quantization_matrix_n_N) * quantization_matrix_n_N
+                # Apply DCT
+                block_dct = cv2.dct(np.float32(block))
 
-            # Perform zigzag traversal
-            zigzag_block = zigzag(block_dct_quantized, zigzag_percentage)
+                # Quantize DCT coefficients
+                block_dct_quantized = np.round(block_dct / quantization_matrix_n_N) * quantization_matrix_n_N
 
-            # Add to the respective column
-            columns_dict[j].append(np.abs(zigzag_block))
+                # Perform zigzag traversal
+                zigzag_block = zigzag(block_dct_quantized, zigzag_percentage)
+
+                # Add to the respective column
+                columns_dict[channel_name][j].append(np.abs(zigzag_block))
 
     return columns_dict
 
 
+def inverse_zigzag(zigzag_block, block_shape):
+    block = np.zeros(block_shape, dtype=np.float32)
+    h, v = 0, 0
+    idx = 0
+
+    for i in range(len(zigzag_block)):
+        block[v, h] = zigzag_block[i]
+        if (h + v) % 2 == 0:  # Going up
+            if v == 0:
+                if h == block_shape[1] - 1:
+                    v += 1
+                else:
+                    h += 1
+            elif h == block_shape[1] - 1:
+                v += 1
+            else:
+                v -= 1
+                h += 1
+        else:  # Going down
+            if h == 0:
+                if v == block_shape[0] - 1:
+                    h += 1
+                else:
+                    v += 1
+            elif v == block_shape[0] - 1:
+                h += 1
+            else:
+                v += 1
+                h -= 1
+    return block
+
 def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
+
     if not isinstance(columns_dict, dict):
         raise TypeError("Expected 'columns_dict' to be a dictionary.")
 
@@ -230,22 +215,93 @@ def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
 
     return reconstructed_image
 
-def hash_dictionary_elements_sha256(input_dict):
+def reconstruct_colored_image(columns_dict, block_size, original_shape):
 
-    hashed_dict = {}
-    
-    for key, value in input_dict.items():
-        # Ensure the value is a string before hashing
-        value_str = str(value)
-        hash_obj = hashlib.sha256()
-        hash_obj.update(value_str.encode('utf-8'))
-        hashed_value = hash_obj.hexdigest()
-        hashed_dict[key] = hashed_value
-    
-    return hashed_dict
+    # Initialize the image channels
+    restored_channels = {'Y': np.zeros(original_shape[:2], dtype=np.float32),
+                         'Cr': np.zeros(original_shape[:2], dtype=np.float32),
+                         'Cb': np.zeros(original_shape[:2], dtype=np.float32)}
+
+    # Reconstruct each channel
+    for channel_name in ['Y', 'Cr', 'Cb']:
+        if channel_name in columns_dict:
+            restored_channels[channel_name] = reconstruct_image_from_columns(
+                columns_dict[channel_name], block_size, original_shape[:2]
+            )
+
+    # Stack the channels
+    restored_image_ycrcb = np.stack([restored_channels['Y'],
+                                     restored_channels['Cr'],
+                                     restored_channels['Cb']], axis=2)
+
+    # Clip values to the valid range [0, 255] and convert to uint8
+    restored_image_ycrcb = np.clip(restored_image_ycrcb, 0, 255).astype(np.uint8)
+
+    # Convert back to BGR color space
+    restored_image_bgr = cv2.cvtColor(restored_image_ycrcb, cv2.COLOR_YCrCb2BGR)
+
+    return restored_image_bgr
+
+
+
+
+
+def reconstruct_colored_image(columns_dict, block_size, original_shape):
+    """
+    Reconstruct a colored image from the columns_dict.
+    """
+    # Initialize the image channels
+    restored_channels = {'Y': np.zeros(original_shape[:2], dtype=np.float32),
+                         'Cr': np.zeros(original_shape[:2], dtype=np.float32),
+                         'Cb': np.zeros(original_shape[:2], dtype=np.float32)}
+
+    # Reconstruct each channel
+    for channel_name in ['Y', 'Cr', 'Cb']:
+        if channel_name in columns_dict:
+            restored_channels[channel_name] = reconstruct_image_from_columns(
+                columns_dict[channel_name], block_size, original_shape[:2]
+            )
+
+    # Stack the channels
+    restored_image_ycrcb = np.stack([restored_channels['Y'],
+                                     restored_channels['Cr'],
+                                     restored_channels['Cb']], axis=2)
+
+    # Clip values to the valid range [0, 255] and convert to uint8
+    restored_image_ycrcb = np.clip(restored_image_ycrcb, 0, 255).astype(np.uint8)
+
+    # Convert back to BGR color space
+    restored_image_bgr = cv2.cvtColor(restored_image_ycrcb, cv2.COLOR_YCrCb2BGR)
+
+    return restored_image_bgr
+
+
+
+
+def hash_columns_dict(columns_dict):
+   
+    hashed_columns_dict = {'Y': {}, 'Cr': {}, 'Cb': {}}
+
+    for channel in columns_dict:
+        for column_index, column_data in columns_dict[channel].items():
+            # Convert the column data to a byte string
+            column_bytes = np.array(column_data).tobytes()
+            
+            # Compute the SHA-256 hash
+            sha256_hash = hashlib.sha256(column_bytes).hexdigest()
+            
+            # Store the hash in the new dictionary
+            hashed_columns_dict[channel][column_index] = sha256_hash
+
+    return hashed_columns_dict
+
+
+
 
 def encrypt_array(array, key):
     # Convert the array to bytes
+    array = np.array(array)  # Convert to NumPy array if it's not already one
+    
     byte_data = array.tobytes()
     
     # Encrypt
@@ -326,24 +382,51 @@ def decrypt_dict(encrypted_data_dict, key, indices_to_decrypt):
 
     return decrypted_dict
 
+
+
+
 def compare_dicts(dict1, dict2):
     differing_keys = []
+    
     for key in dict1:
         if key in dict2:
-            if str(dict2[key]) != str(dict1[key]) :
+            # Check if the values are lists
+            if isinstance(dict1[key], list) and isinstance(dict2[key], list):
+                # Compare each element in the lists
+                for i, (arr1, arr2) in enumerate(zip(dict1[key], dict2[key])):
+                    if isinstance(arr1, np.ndarray) and isinstance(arr2, np.ndarray):
+                        if not np.array_equal(arr1, arr2):
+                            differing_keys.append(f"{key}[{i}]")  # Track the index of the differing array
+                    elif str(arr1) != str(arr2):
+                        differing_keys.append(f"{key}[{i}]")  # Track the index of the differing element
+            # Handle non-list values
+            elif isinstance(dict1[key], np.ndarray) and isinstance(dict2[key], np.ndarray):
+                if not np.array_equal(dict1[key], dict2[key]):
+                    differing_keys.append(key)
+            elif str(dict1[key]) != str(dict2[key]):
                 differing_keys.append(key)
+    
     return differing_keys
 
-def replace_values(dict1, dict2):
+import numpy as np
 
-    keys1 = list(dict2.keys())
-   
-    for key in keys1:
+def replace_values(dict1, differences, dict2):
+    """
+    Replaces specific elements in `dict1` with values from `dict2` based on the `differences` list.
+    The `differences` list contains keys and indices in the format 'key[index]'.
+    """
+    for diff in differences:
+        # Extract the key and index from the difference string (e.g., 'Y[2]')
+        key, index = diff.split('[')
+        index = int(index[:-1])  # Remove the closing bracket and convert to integer
         
-        
-        dict1[key] = dict2[key]
+        # Check if the key exists in both dictionaries
+        if key in dict1 and key in dict2:
+            # Ensure the value is a list and the index is valid
+            if isinstance(dict1[key], list) and isinstance(dict2[key], list):
+                if index < len(dict1[key]) and index < len(dict2[key]):
+                    dict1[key][index] = dict2[key][index]
     return dict1
-
 def blur_other_columns(image, differences, block_size, blur_strength=400):
 
     # Create a blurred version of the original image
