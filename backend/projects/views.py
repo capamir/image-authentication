@@ -54,9 +54,9 @@ def uploadImage(request):
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
         #Extract MSB for compression
-        msb_image = extract_msb(gray_image, 5)  
+        msb_image = extract_msb(gray_image, 6)  
         logger.debug(f"MSB Image Shape: {msb_image.shape}")
-        block_size = 16
+        block_size = 8
         percentage = percentage_received
 
         # Process the image using DCT Zigzag
