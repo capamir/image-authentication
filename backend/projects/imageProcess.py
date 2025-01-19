@@ -19,14 +19,17 @@ quantization_matrix = np.array([
         [49, 64, 78, 87, 103, 121, 120, 101],
         [72, 92, 95, 98, 112, 100, 103, 99]
     ])
+
 def extract_msb(image_array, k):
     try:
-        if len(image_array.shape) == 2:  
+        if len(image_array.shape) == 2:  # Grayscale image
             msb = image_array >> (8 - k)
             new_img = msb
-        elif len(image_array.shape) == 3: 
-            
-            new_img = image_array >> (8 - k)
+        elif len(image_array.shape) == 3:  # Color image
+            msb = image_array >> (8 - k)
+            # Normalize the pixel values to maintain color balance
+            new_img = (msb / (2**k - 1)) * 255
+            new_img = new_img.astype(np.uint8)
         else:
             raise ValueError("Unsupported image format")
         return new_img
@@ -200,7 +203,7 @@ def dct_zigzag_entire_channel(channel,quantization_matrix=quantization_matrix):
     channel_dct_quantized = np.round(channel_dct / quantization_matrix) * quantization_matrix
 
     
-    zigzag_channel = zigzag(channel_dct_quantized, 15)
+    zigzag_channel = zigzag(channel_dct_quantized,30)
 
     return zigzag_channel
 
@@ -335,29 +338,34 @@ def encrypt_columns_dict(columns_dict, key):
     return encrypted_columns_dict
 
 
-def decrypt_selected_columns(encrypted_columns_dict, key, columns_to_decrypt):
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+import pickle
 
-   
+def decrypt_selected_columns(encrypted_columns_dict, key, columns_to_decrypt):
     cipher = AES.new(key, AES.MODE_ECB)
 
     # Decrypt only the selected columns
     decrypted_columns_dict = {}
+    
+   
     for j in columns_to_decrypt:
-        if j in encrypted_columns_dict:
+        # Convert the column index to a string to match the keys in encrypted_columns_dict
+        column_key = str(j)
+        
+        if column_key in encrypted_columns_dict:
             # Decrypt the data
-            decrypted_data = cipher.decrypt(encrypted_columns_dict[j])
+            decrypted_data = cipher.decrypt(encrypted_columns_dict[column_key])
 
             # Unpad the data
             unpadded_data = unpad(decrypted_data, AES.block_size)
 
-            
+            # Deserialize the data
             column = pickle.loads(unpadded_data)
 
             # Store the decrypted column
-            decrypted_columns_dict[j] = column
-        else:
-            print(f"Column {j} not found in encrypted_columns_dict.")
-
+            decrypted_columns_dict[column_key] = column
+      
     return decrypted_columns_dict
 
 
@@ -378,13 +386,15 @@ def calculate_column_hashes(columns_dict):
     return column_hashes
 
 def replace_columns(original_dict, new_columns_dict):
-
     for j, column in new_columns_dict.items():
-        if j in original_dict:
-            original_dict[j] = column
-  
+        # Convert the key to an integer if necessary
+        key = int(j) if isinstance(j, str) and j.isdigit() else j
+        
+        if key in original_dict:
+            
+            original_dict[key] = column
+    
     return original_dict
-
 
 def compare_hash_arrays(hash_array_1, hash_array_2):
     differences = []
@@ -407,6 +417,8 @@ def compare_hash_arrays(hash_array_1, hash_array_2):
             differences.append(j)
     
     return differences
+
+
 def blur_other_columns(image, differences, block_size, blur_strength=400):
     
     block_size = int(block_size)

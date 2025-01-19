@@ -66,8 +66,11 @@ def uploadImage(request):
         channel_Y_en = encrypt_columns_dict(columns_dict_Y, key)
 
         # Extract Cb and Cr channels
-        cb_channel = image[:, :, 1]
-        cr_channel = image[:, :, 2]
+        cb_channel = image_msb[:, :, 1]
+        cr_channel = image_msb[:, :, 2]
+
+       
+
 
         # Apply DCT, quantization, and zigzag traversal on the entire Cb and Cr channels
         zigzag_cb = dct_zigzag_entire_channel(cb_channel)
@@ -169,9 +172,10 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
 
         # Extract Cb and Cr channels
-        cb_channel = image[:, :, 1]
-        cr_channel = image[:, :, 2]
+        cb_channel = image_msb[:, :, 1]
+        cr_channel = image_msb[:, :, 2]
 
+   
 
         # Process the channel Y 
         columns_dict_Y = block_dct_zigzag_y_channel(image_msb, block_size, percentage)
@@ -206,7 +210,9 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
         if (key != None):
             
-            decrypt_columns_different = decrypt_selected_columns(encrypted_Y_Original_image, key,encrypted_Y_Original_image )
+            decrypt_columns_different = decrypt_selected_columns(encrypted_Y_Original_image, key,differences)
+           
+
             updated_columns_dict = replace_columns(columns_dict_Y,decrypt_columns_different)
 
 
