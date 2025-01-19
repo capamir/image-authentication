@@ -22,18 +22,86 @@ This platform provides a secure and efficient solution for image authentication 
 ## Workflow
 
 1. **Authentication (Step 1)**: 
-   - Uploaded images are processed by converting them to grayscale.
-   - The **Most Significant Bit (MSB)** is extracted and the image is divided into blocks.
-   - Each block undergoes **Discrete Cosine Transform (DCT)**, and a percentage of coefficients are removed using the **Zigzag algorithm** for data reduction.
-   - The processed blocks are hashed to create a unique identifier.
-   - This hash and the encrypted DCT coefficients are stored in a **private blockchain**, ensuring tamper-proof storage.
+   1. Image Preprocessing:
+
+      - Convert the image to the YCbCr color space.
+
+      - Separate the Y (luminance), Cb (blue-difference), and Cr (red-difference) channels.
+
+   2. Block-Based DCT on the Y Channel:
+
+      - Divide the Y channel into smaller blocks (e.g., 8x8 or 16x16 pixels).
+
+      - Apply DCT to each block individually.
+
+      - Use the Zigzag algorithm to reduce the number of DCT coefficients 
+
+   3. Global DCT on Cb and Cr Channels:
+
+      - Apply DCT to the entire Cb and Cr channels (without dividing them into blocks).
+
+      - Use the Zigzag algorithm to reduce the DCT coefficients for these channels.
+
+      - Encryption of DCT Coefficients:
+
+      - Encrypt the reduced DCT coefficients of the Y, Cb, and Cr channels using AES encryption.
+
+   4. Hashing:
+
+      - Hash the encrypted DCT coefficients' channel Y to create a unique identifier for the image.
+
+   5. Blockchain Storage:
+      - store the hash and the encrypted DCT coefficients in a private blockchain for tamper-proof storage.
+
 
 2. **Verification (Step 2)**:
-   - The client uploads an image for verification.
-   - The same processing steps are applied to the uploaded image to generate its hash.
-   - The generated hash is compared with the original image’s hash stored in the blockchain.
-   - Discrepancies are identified, and the columns with differences are decrypted using **AES** and restored to their original state, ensuring the integrity of the image.
+   1. Image Upload:
 
+      -The client uploads an image for verification.
+
+   2. Preprocessing:
+
+      - Convert the uploaded image to YCbCr and separate the Y, Cb, and Cr channels.
+
+   3. Block-Based DCT on the Y Channel:
+
+      - Divide the Y channel into blocks and apply DCT to each block.
+
+      - Reduce the coefficients using the Zigzag algorithm.
+
+   4. Global DCT on Cb and Cr Channels:
+
+      - Apply DCT to the entire Cb and Cr channels.
+
+      - Reduce the coefficients using the Zigzag algorithm.
+
+   5. Encryption of DCT Coefficients:
+
+      - Encrypt the reduced DCT coefficients of the Y, Cb, and Cr channels using AES.
+
+   6. Hashing:
+
+     - Generate a hash from the encrypted DCT coefficients channel Y.
+
+   7. Comparison:
+
+      - Import the original image’s hash from the blockchain.
+
+      - Compare the generated hash with the original hash.
+
+      - Identify discrepancies (if any).
+
+   8. Tampering Detection and Restoration:
+
+      - If discrepancies are found:
+
+      - Identify the specific columns (or blocks) in the Y  channels that have been tampered with.
+
+      - Decrypt the corresponding DCT coefficients from the blockchain.
+
+      - Replace the tampered columns in the uploaded image with the original data.
+
+      - Restore the image to its original state.
 ## Requirements
 
 - Python 3.x
