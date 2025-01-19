@@ -81,7 +81,7 @@ This platform provides a secure and efficient solution for image authentication 
 
    6. Hashing:
 
-     - Generate a hash from the encrypted DCT coefficients channel Y.
+      - Generate a hash from the encrypted DCT coefficients channel Y.
 
    7. Comparison:
 
