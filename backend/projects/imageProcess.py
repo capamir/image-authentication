@@ -9,6 +9,7 @@ import pickle
 
 
 
+
 quantization_matrix = np.array([
         [16, 11, 10, 16, 24, 40, 51, 61],
         [12, 12, 14, 19, 26, 58, 60, 55],
@@ -27,7 +28,7 @@ def extract_msb(image_array, k):
             new_img = msb
         elif len(image_array.shape) == 3:  # Color image
             msb = image_array >> (8 - k)
-            # Normalize the pixel values to maintain color balance
+            # Normalize the pixel values
             new_img = (msb / (2**k - 1)) * 255
             new_img = new_img.astype(np.uint8)
         else:
@@ -110,12 +111,13 @@ def zigzag(input, percentage):
 def inverse_zigzag(zigzag_block, block_shape):
     block = np.zeros(block_shape, dtype=np.float32)
     h, v = 0, 0
-    idx = 0
-
+    
     for i in range(len(zigzag_block)):
         if v >= block_shape[0] or h >= block_shape[1]:
-            break  # Avoid out-of-bounds access
+            break  
         block[v, h] = zigzag_block[i]
+
+
         if (h + v) % 2 == 0:  # Going up
             if v == 0:
                 if h == block_shape[1] - 1:
@@ -188,18 +190,16 @@ def dct_zigzag_entire_channel(channel,quantization_matrix=quantization_matrix):
     scale_factor_w = w / 8
     quantization_matrix = zoom(quantization_matrix, (scale_factor_h, scale_factor_w), order=1)
     quantization_matrix = np.round(quantization_matrix).astype(int)
-
-   
     quantization_matrix[quantization_matrix == 0] = 1
+
 
     # Apply DCT on the entire channel
     channel_dct = cv2.dct(np.float32(channel))
-
-    # Check for NaN or Inf values in channel_dct
     if np.any(np.isnan(channel_dct)) or np.any(np.isinf(channel_dct)):
         raise ValueError("channel_dct contains NaN or Inf values.")
 
-    # Quantize DCT coefficients using the scaled quantization matrix
+
+    # Quantize DCT 
     channel_dct_quantized = np.round(channel_dct / quantization_matrix) * quantization_matrix
 
     
@@ -257,9 +257,6 @@ def calculate_column_hashes(columns_dict):
         column_hashes[j] = column_hash
 
     return column_hashes
-
-
-
 
 def encrypt_dct_zigzag_output(zigzag_output, key):
 
@@ -338,10 +335,6 @@ def encrypt_columns_dict(columns_dict, key):
     return encrypted_columns_dict
 
 
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
-import pickle
-
 def decrypt_selected_columns(encrypted_columns_dict, key, columns_to_decrypt):
     cipher = AES.new(key, AES.MODE_ECB)
 
@@ -369,6 +362,33 @@ def decrypt_selected_columns(encrypted_columns_dict, key, columns_to_decrypt):
     return decrypted_columns_dict
 
 
+
+def normalize_column(column):
+    
+    min_val = np.min(column)
+    max_val = np.max(column)
+    return (column - min_val) / (max_val - min_val)
+
+
+def calculate_column_hashes(columns_dict):
+    column_hashes = {}
+    for j, column in columns_dict.items():
+        # Normalize the column
+        normalized_column = normalize_column(column)
+        
+        # Serialize the normalized column
+        column_bytes = pickle.dumps(normalized_column)
+
+        # Calculate the SHA-256 hash of the column bytes
+        hash_object = hashlib.sha256(column_bytes)
+        column_hash = hash_object.hexdigest()  
+
+        # Store the hash in the dictionary
+        column_hashes[j] = column_hash
+
+    return column_hashes
+
+
 def calculate_column_hashes(columns_dict):
 
     column_hashes = {}
@@ -385,6 +405,7 @@ def calculate_column_hashes(columns_dict):
 
     return column_hashes
 
+
 def replace_columns(original_dict, new_columns_dict):
     for j, column in new_columns_dict.items():
         # Convert the key to an integer if necessary
@@ -395,6 +416,7 @@ def replace_columns(original_dict, new_columns_dict):
             original_dict[key] = column
     
     return original_dict
+
 
 def compare_hash_arrays(hash_array_1, hash_array_2):
     differences = []
@@ -453,7 +475,7 @@ def blur_other_columns(image, differences, block_size, blur_strength=400):
 
 def generate_secret_key_from_file(file_obj, length):
     if length not in [16, 24, 32]:
-        raise ValueError("Key length must be 16, 24, or 32 bytes (corresponding to AES-128, AES-192, or AES-256).")
+        raise ValueError("Key length must be 16, 24, or 32 bytes.")
 
     
     file_content = file_obj.read().decode().strip()  
@@ -472,8 +494,6 @@ def generate_secret_key_from_file(file_obj, length):
     extracted_bytes = extracted_bits.to_bytes(length, byteorder='big')
 
     return extracted_bytes
-
-
 
 
 def encode_bytes_in_dict(data):

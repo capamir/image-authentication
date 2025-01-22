@@ -48,7 +48,7 @@ def uploadImage(request):
             return Response({'error': 'Failed to decode image'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extract MSB for compression
-        k = 6
+        k = 5
         image_msb = extract_msb(image, k)
 
         logger.debug(f"MSB Image Shape: {image_msb.shape}")
