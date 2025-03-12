@@ -26,8 +26,7 @@ const How = () => {
         </Heading>
 
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-          At <strong>Image Authentication Site</strong>, we specialize in two
-          core operations that ensure the authenticity and integrity of your
+          In <strong>Image Authentication and Restoration platform</strong>, we ensure the authenticity and integrity of your
           digital images. Here's a step-by-step guide to how our process works:
         </Text>
 
@@ -65,15 +64,15 @@ const How = () => {
           fontWeight="600"
           color="text"
         >
-          Step 2: Authenticate Image with Blockchain
+          Step 2: Storing the Image Hash in Blockchain
         </Heading>
 
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-          In the second step, you or another user submits:
+          In the second step, the user submits:
         </Text>
         <Box as="ul" paddingLeft="1.5rem">
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-            The image you want to verify.
+            The image whose integrity to be verified.
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             The corresponding **encrypted key**.
@@ -90,11 +89,11 @@ const How = () => {
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             Using the **DCT algorithm**, we compare the submitted image with the
-            blockchain-stored image.
+            image whose hash is stored in a block.
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-            Any differences between the two images are analyzed and reported to
-            verify their authenticity.
+            Any malicious differences between the two images are analyzed and reported to
+            verify the authenticity of the original image.
           </Text>
         </Box>
 
