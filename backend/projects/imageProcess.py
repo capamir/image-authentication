@@ -185,7 +185,7 @@ def block_dct_zigzag_y_channel(image, block_size, zigzag_percentage,quantization
 
     return columns_dict
 
-def dct_zigzag_entire_channel(channel,percentage,quantization_matrix=quantization_matrix, ):
+def dct_zigzag_entire_channel(channel,percentage,quantization_matrix=quantization_matrix):
  
     h, w = channel.shape
     scale_factor_h = h / 8

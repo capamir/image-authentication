@@ -173,7 +173,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
         # Decode image
         image_bytes = image_file.read()
         image_np = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(image_np, cv2.COLOR_BGR2YCrCb)
+        image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
         key = generate_secret_key_from_file(image_key, 16)
 
         # Extract MSB for compression
