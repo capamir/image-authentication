@@ -26,8 +26,7 @@ const How = () => {
         </Heading>
 
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-          At <strong>Image Authentication Site</strong>, we specialize in two
-          core operations that ensure the authenticity and integrity of your
+          In <strong>Image Authentication and Storation Platform</strong>, we ensure the authenticity and integrity of your
           digital images. Here's a step-by-step guide to how our process works:
         </Text>
 
@@ -41,16 +40,15 @@ const How = () => {
         </Heading>
 
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-          In the first step, you upload an image to our platform. Using our
-          advanced **Discrete Cosine Transform (DCT) algorithm**, we:
+          In the first step, you upload an image to our platform. Using the hash generation algorithm**, we:
         </Text>
         <Box as="ul" paddingLeft="1.5rem">
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             Analyze the image and apply a secure encryption process.
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-            Generate a unique encryption key that serves as the key to decrypt
-            the image later.
+            Generate a unique encryption key that serves as the key to encrypt/decrypt
+            the image.
           </Text>
         </Box>
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
@@ -65,7 +63,7 @@ const How = () => {
           fontWeight="600"
           color="text"
         >
-          Step 2: Authenticate Image with Blockchain
+          Step 2: Storing the Image Hash in the Blockchain
         </Heading>
 
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
@@ -73,7 +71,7 @@ const How = () => {
         </Text>
         <Box as="ul" paddingLeft="1.5rem">
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-            The image you want to verify.
+            The image whose integrity must be verified.
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             The corresponding **encrypted key**.
@@ -94,7 +92,7 @@ const How = () => {
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             Any differences between the two images are analyzed and reported to
-            verify their authenticity.
+            restore the image.
           </Text>
         </Box>
 
