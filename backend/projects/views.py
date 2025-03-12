@@ -10,6 +10,7 @@ from django.db import transaction
 from projects.models import Block
 import base64
 import json
+import matplotlib.pyplot as plt
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ def uploadImage(request):
         uploaded_file = request.FILES.get('file')
         percentage = request.data.get('percentage')
 
-        # Validate inputs
+        # Validate inputs   
         if not image_file:
             return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -41,21 +42,24 @@ def uploadImage(request):
         # Decode image
         image_bytes = image_file.read()
         image_np = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(image_np, cv2.COLOR_BGR2YCrCb)
+        image_input = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
         key = generate_secret_key_from_file(uploaded_file, 16)
-
-        if image is None:
+       
+        if image_input is None:
             return Response({'error': 'Failed to decode image'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extract MSB for compression
         k = 5
-        image_msb = extract_msb(image, k)
+        image_msb = extract_msb(image_input, k)
+        
+      
+
 
         logger.debug(f"MSB Image Shape: {image_msb.shape}")
         block_size = 16
         percentage = percentage_received
 
-        # Process the image using DCT Zigzag
+        # Process the image's Y channel using DCT Zigzag
         columns_dict_Y = block_dct_zigzag_y_channel(image_msb, block_size, percentage)
         logger.debug(f"Columns Dictionary: {columns_dict_Y}")
 
@@ -73,15 +77,16 @@ def uploadImage(request):
 
 
         # Apply DCT, quantization, and zigzag traversal on the entire Cb and Cr channels
-        zigzag_cb = dct_zigzag_entire_channel(cb_channel)
-        zigzag_cr = dct_zigzag_entire_channel(cr_channel)
+        zigzag_cb = dct_zigzag_entire_channel(cb_channel,percentage)
+        zigzag_cr = dct_zigzag_entire_channel(cr_channel,percentage)
 
         # Encrypting channels entire Cb and Cr
         zigzag_cb_en = encrypt_dct_zigzag_output(zigzag_cb, key)
         zigzag_cr_en = encrypt_dct_zigzag_output(zigzag_cr, key)
 
         # Reconstruct the image from columns channels
-        restored_y_channel = reconstruct_y_channel_image(columns_dict_Y, block_size, image.shape)
+        restored_y_channel = reconstruct_y_channel_image(columns_dict_Y, block_size, image_input.shape)
+        
         logger.debug(f"Reconstructed Image Shape: {restored_y_channel.shape}")
 
         # Reconstruct the Cb and Cr channels
@@ -91,14 +96,22 @@ def uploadImage(request):
         # Combine the restored Y, Cb, and Cr channels to form the final image
         restored_image_ycrcb = cv2.merge([restored_y_channel, restored_cb_channel, restored_cr_channel])
 
-
         # Normalize the reconstructed image to ensure the brightness is retained
         reconstructed_image_normalized = cv2.normalize(restored_image_ycrcb, None, 0, 255, cv2.NORM_MINMAX)
-        reconstructed_image_normalized = reconstructed_image_normalized.astype(np.uint8)  # Ensure data type is uint8
+
+        reconstructed_image_normalized = reconstructed_image_normalized.astype(np.uint8)
+        # Log the image dimensions
+    
+        # plt.imshow(reconstructed_image_normalized)
+        # plt.show()
 
         # Encode reconstructed image for JSON response
         _, reconstructed_image_encoded = cv2.imencode('.png', reconstructed_image_normalized)
         reconstructed_image_base64 = base64.b64encode(reconstructed_image_encoded).decode('utf-8')
+        
+
+    
+       
 
         # Encode bytes within dictionaries
         channel_Y_en_encoded = encode_bytes_in_dict(channel_Y_en) if channel_Y_en else None
@@ -164,7 +177,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
         key = generate_secret_key_from_file(image_key, 16)
 
         # Extract MSB for compression
-        k = 6
+        k = 5
         image_msb = extract_msb(image, k)
         logger.debug(f"MSB Image Shape: {image_msb.shape}")
         block_size = 16
@@ -227,6 +240,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
             # Combine the restored Y, Cb, and Cr channels to form the final image
             restored_image_ycrcb = cv2.merge([restored_y_channel, restored_cb_channel, restored_cr_channel])
+            restored_image_ycrcb = cv2.resize(restored_image_ycrcb, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_AREA)
 
 
 

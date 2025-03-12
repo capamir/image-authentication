@@ -100,6 +100,7 @@ const Uploader = () => {
 
       if (data) {
         setCompressedImageUrl(`data:image/png;base64,${data.compressed_image}`);
+   
         toast({
           title: "Upload successful",
           description: (
@@ -269,9 +270,11 @@ const Uploader = () => {
                 <CardBody>
                   <Image
                     src={file.preview}
-                    alt={file.name}
-                    objectFit="cover"
-                    borderRadius="md"
+                    alt="Image"
+                        width="100%" // Fill the container
+                        height="auto" // Preserve aspect ratio
+                        objectFit="contain"
+                        borderRadius="md"
                   />
                 </CardBody>
               </Card>
@@ -290,12 +293,15 @@ const Uploader = () => {
             {compressedImageUrl && (
               <Card width={{ base: "100%", md: "400px" }} marginY={4} > 
                 <CardBody>
-                  <Image
-                    src={compressedImageUrl}
-                    alt="compressedImage"
-                    objectFit="cover"
-                    borderRadius="md"
-                  />
+                <Image
+                        src={compressedImageUrl}
+                        alt="compressedImage"
+                        width="100%" // Fill the container
+                        height="auto" // Preserve aspect ratio
+                        objectFit="contain"
+                        borderRadius="md"
+                    />
+             
                 </CardBody>
               </Card>
             )}

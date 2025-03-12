@@ -20,6 +20,7 @@ class Block(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     previous_hash = models.CharField(max_length=64)
     hash = models.CharField(max_length=64)
+    
     column_hash = models.TextField()
     encrypted_Y = JSONField(null=True, blank=True)
     encrypted_Cb = JSONField(null=True, blank=True)

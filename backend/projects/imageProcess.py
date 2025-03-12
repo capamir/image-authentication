@@ -181,9 +181,11 @@ def block_dct_zigzag_y_channel(image, block_size, zigzag_percentage,quantization
             # Add to the respective column
             columns_dict[j].append(np.abs(zigzag_block))
 
+
+
     return columns_dict
 
-def dct_zigzag_entire_channel(channel,quantization_matrix=quantization_matrix):
+def dct_zigzag_entire_channel(channel,percentage,quantization_matrix=quantization_matrix, ):
  
     h, w = channel.shape
     scale_factor_h = h / 8
@@ -203,7 +205,7 @@ def dct_zigzag_entire_channel(channel,quantization_matrix=quantization_matrix):
     channel_dct_quantized = np.round(channel_dct / quantization_matrix) * quantization_matrix
 
     
-    zigzag_channel = zigzag(channel_dct_quantized,30)
+    zigzag_channel = zigzag(channel_dct_quantized, percentage)
 
     return zigzag_channel
 
@@ -311,56 +313,6 @@ def reconstruct_entire_channel(zigzag_channel, original_shape):
     channel = np.clip(channel, 0, 255).astype(np.uint8)
 
     return channel
-
-def encrypt_columns_dict(columns_dict, key):
- 
-    # Initialize AES cipher in ECB mode
-    cipher = AES.new(key, AES.MODE_ECB)
-
-    # Encrypt each column
-    encrypted_columns_dict = {}
-    for j, column in columns_dict.items():
-        
-        column_bytes = pickle.dumps(column)
-
-        # Pad 
-        padded_data = pad(column_bytes, AES.block_size)
-
-        # Encrypt the data
-        encrypted_data = cipher.encrypt(padded_data)
-
-        # Store the encrypted data
-        encrypted_columns_dict[j] = encrypted_data
-
-    return encrypted_columns_dict
-
-
-def decrypt_selected_columns(encrypted_columns_dict, key, columns_to_decrypt):
-    cipher = AES.new(key, AES.MODE_ECB)
-
-    # Decrypt only the selected columns
-    decrypted_columns_dict = {}
-    
-   
-    for j in columns_to_decrypt:
-        # Convert the column index to a string to match the keys in encrypted_columns_dict
-        column_key = str(j)
-        
-        if column_key in encrypted_columns_dict:
-            # Decrypt the data
-            decrypted_data = cipher.decrypt(encrypted_columns_dict[column_key])
-
-            # Unpad the data
-            unpadded_data = unpad(decrypted_data, AES.block_size)
-
-            # Deserialize the data
-            column = pickle.loads(unpadded_data)
-
-            # Store the decrypted column
-            decrypted_columns_dict[column_key] = column
-      
-    return decrypted_columns_dict
-
 
 
 def normalize_column(column):
@@ -521,3 +473,56 @@ def decode_bytes_in_dict(data):
         return [decode_bytes_in_dict(item) for item in data]
     else:
         return data  
+
+
+
+def encrypt_columns_dict(columns_dict, key):
+ 
+    # Initialize AES cipher in ECB mode
+    cipher = AES.new(key, AES.MODE_ECB)
+
+    # Encrypt each column
+    encrypted_columns_dict = {}
+    for j, column in columns_dict.items():
+        
+        column_bytes = pickle.dumps(column)
+
+        # Pad 
+        padded_data = pad(column_bytes, AES.block_size)
+
+        # Encrypt the data
+        encrypted_data = cipher.encrypt(padded_data)
+
+        # Store the encrypted data
+        encrypted_columns_dict[j] = encrypted_data
+
+    return encrypted_columns_dict
+
+
+def decrypt_selected_columns(encrypted_columns_dict, key, columns_to_decrypt):
+    cipher = AES.new(key, AES.MODE_ECB)
+
+    # Decrypt only the selected columns
+    decrypted_columns_dict = {}
+    
+   
+    for j in columns_to_decrypt:
+        # Convert the column index to a string to match the keys in encrypted_columns_dict
+        column_key = str(j)
+        
+        if column_key in encrypted_columns_dict:
+            # Decrypt the data
+            decrypted_data = cipher.decrypt(encrypted_columns_dict[column_key])
+
+            # Unpad the data
+            unpadded_data = unpad(decrypted_data, AES.block_size)
+
+            # Deserialize the data
+            column = pickle.loads(unpadded_data)
+
+            # Store the decrypted column
+            decrypted_columns_dict[column_key] = column
+      
+    return decrypted_columns_dict
+
+
