@@ -26,7 +26,7 @@ const About = () => {
         </Heading>
 
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-          Welcome to <strong>Image Authentication Site</strong>, where
+          Welcome to <strong>Image Authentication and Restoration Platform</strong>, where
           safeguarding the authenticity of digital images is our mission. In
           today’s digital age, the integrity of visual content has never been
           more critical. We are dedicated to ensuring your images are genuine
@@ -49,12 +49,11 @@ const About = () => {
         </Text>
         <Box as="ul" paddingLeft="1.5rem">
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-            <strong>Image Verification:</strong> Advanced tools to detect any
+            <strong>Image Authentication:</strong> An advance tool to detect malicious
             alterations or tampering.
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
-            <strong>Authenticity Analysis:</strong> Comprehensive reports that
-            validate the originality of your content.
+            <strong>Authenticity Analysis:</strong> Validate the originality of your content.
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             <strong>Integrity Protection:</strong> Helping you maintain trust in
@@ -81,7 +80,7 @@ const About = () => {
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             <strong>Expert Team:</strong> A group of skilled analysts and
-            developers ensures every image is thoroughly examined.
+            developers ensures every image to be thoroughly examined.
           </Text>
           <Text as="li" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
             <strong>Trustworthy Service:</strong> We prioritize transparency and
@@ -99,7 +98,7 @@ const About = () => {
         </Heading>
         <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8">
           At <strong>Image Authentication Site</strong>, we understand the value
-          of authentic content. Whether you’re a photographer, business owner,
+          of an authentic content. Whether you’re a photographer, business owner,
           or digital creator, our services are tailored to protect your images
           from tampering and uphold their credibility.
         </Text>
