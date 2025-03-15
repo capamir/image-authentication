@@ -154,10 +154,12 @@ const UploaderKey = () => {
     >
       <CardBody>
         <Heading
-          as="h2"
           background={gradient}
+          as="h2"
           backgroundClip="text"
           marginBottom="2rem"
+          fontSize={{ base: "24px", md: "28px", lg: "32px" }}
+          textAlign="center"
         >
           verification image
         </Heading>

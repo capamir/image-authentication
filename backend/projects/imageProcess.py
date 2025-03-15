@@ -21,22 +21,27 @@ quantization_matrix = np.array([
         [72, 92, 95, 98, 112, 100, 103, 99]
     ])
 
+
 def extract_msb(image_array, k):
     try:
+        if k < 1 or k > 8:
+            raise ValueError("k must be between 1 and 8")
+        
         if len(image_array.shape) == 2:  # Grayscale image
             msb = image_array >> (8 - k)
-            new_img = msb
+            new_img = (msb / (2**k - 1)) * 255
+            new_img = new_img.astype(np.uint8)
         elif len(image_array.shape) == 3:  # Color image
             msb = image_array >> (8 - k)
-            # Normalize the pixel values
             new_img = (msb / (2**k - 1)) * 255
             new_img = new_img.astype(np.uint8)
         else:
             raise ValueError("Unsupported image format")
         return new_img
     except Exception as e:
-        raise ValueError(f"Error in extracting MSB: {str(e)}")
-
+        print(f"An error occurred: {e}")
+        return None
+    
 
 def zigzag(input, percentage):
 
@@ -106,6 +111,7 @@ def zigzag(input, percentage):
             break
 
     return output
+
 
 
 def inverse_zigzag(zigzag_block, block_shape):
@@ -181,9 +187,8 @@ def block_dct_zigzag_y_channel(image, block_size, zigzag_percentage,quantization
             # Add to the respective column
             columns_dict[j].append(np.abs(zigzag_block))
 
-
-
     return columns_dict
+
 
 def dct_zigzag_entire_channel(channel,percentage,quantization_matrix=quantization_matrix):
  
@@ -203,8 +208,6 @@ def dct_zigzag_entire_channel(channel,percentage,quantization_matrix=quantizatio
 
     # Quantize DCT 
     channel_dct_quantized = np.round(channel_dct / quantization_matrix) * quantization_matrix
-
-    
     zigzag_channel = zigzag(channel_dct_quantized, percentage)
 
     return zigzag_channel
@@ -233,10 +236,12 @@ def reconstruct_image_from_columns(columns_dict, block_size, original_shape):
             row_end = row_start + block_size
             col_start = j * block_size
             col_end = col_start + block_size
+           
 
             # Reconstruct the block
             dct_block = inverse_zigzag(zigzag_block, (block_size, block_size))
             block = cv2.idct(dct_block.astype(np.float32))
+           
 
             # Insert block into the image
             reconstructed_image[row_start:row_end, col_start:col_end] = block
@@ -259,6 +264,7 @@ def calculate_column_hashes(columns_dict):
         column_hashes[j] = column_hash
 
     return column_hashes
+
 
 def encrypt_dct_zigzag_output(zigzag_output, key):
 

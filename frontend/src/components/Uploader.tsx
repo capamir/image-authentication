@@ -288,7 +288,7 @@ const Uploader = () => {
               fontSize={{ base: "20px", md: "22px" }}
               marginBottom={3}
             >
-              stored Image
+              Stored Image
             </Heading>
             {compressedImageUrl && (
               <Card width={{ base: "100%", md: "400px" }} marginY={4} > 
