@@ -257,7 +257,7 @@ class ImageAddressViewSet(viewsets.ViewSet):
 
             return Response({
         
-             "message":"The image is authentic and unaltered. ", 
+             "message":"The image has been verified. ", 
                                                               }, status=status.HTTP_200_OK)
 
 

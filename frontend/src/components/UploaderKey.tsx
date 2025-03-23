@@ -161,7 +161,7 @@ const UploaderKey = () => {
           fontSize={{ base: "24px", md: "28px", lg: "32px" }}
           textAlign="center"
         >
-          verification image
+           Image Verification 
         </Heading>
         <form onSubmit={handleSubmit}>
           <FormControl marginY={5}>
@@ -263,31 +263,36 @@ const UploaderKey = () => {
             )}
           </Box>
           <Spacer />
+        {compressedImageUrl && originalImageUrl&& (
+        <>
           <Box>
-            <Heading as="h3" fontSize="25px" marginTop={3} >
-              Manipulated columns
+            <Heading as="h3" fontSize="25px" marginTop={3}>
+              Manipulated Columns
             </Heading>
-            {compressedImageUrl && (
-              <Card width="300px" marginY={4}>
-                <CardBody>
-                  <Image src={compressedImageUrl} alt="compressedImage" />
-                </CardBody>
-              </Card>
-            )}
+            
+            <Card width="300px" marginY={4}>
+              <CardBody>
+                <Image src={compressedImageUrl} alt="compressedImage" />
+              </CardBody>
+            </Card>
+        
           </Box>
           <Spacer />
           <Box>
             <Heading as="h3" fontSize="25px" marginTop={3}>
               Restored Image
             </Heading>
-            {originalImageUrl && (
-              <Card width="300px" marginY={4}>
-                <CardBody>
-                  <Image src={originalImageUrl} alt="originalImage" />
-                </CardBody>
-              </Card>
+            {originalImageUrl &&
+            (
+            <Card width="300px" marginY={4}>
+              <CardBody>
+                <Image src={originalImageUrl} alt="originalImage" />
+              </CardBody>
+            </Card>
             )}
           </Box>
+        </>
+          )}
         </Flex>
       </CardBody>
     </Card>
